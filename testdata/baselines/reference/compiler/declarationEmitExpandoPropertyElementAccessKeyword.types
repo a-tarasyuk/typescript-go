@@ -1,0 +1,14 @@
+//// [tests/cases/compiler/declarationEmitExpandoPropertyElementAccessKeyword.ts] ////
+
+=== a.js ===
+var f = {};
+>f : { default: string; }
+>{} : { default: string; }
+
+f["default"] = "default";
+>f["default"] = "default" : "default"
+>f["default"] : string
+>f : { default: string; }
+>"default" : "default"
+>"default" : "default"
+

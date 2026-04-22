@@ -1,0 +1,10 @@
+//// [tests/cases/compiler/declarationEmitExpandoPropertyElementAccessKeyword.ts] ////
+
+=== a.js ===
+var f = {};
+>f : Symbol(f, Decl(a.js, 0, 3))
+
+f["default"] = "default";
+>f : Symbol(f, Decl(a.js, 0, 3))
+>"default" : Symbol("default", Decl(a.js, 0, 11))
+
