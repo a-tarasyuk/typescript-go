@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/microsoft/typescript-go/internal/ast"
-	"github.com/microsoft/typescript-go/internal/collections"
 	"github.com/microsoft/typescript-go/internal/compiler"
 	"github.com/microsoft/typescript-go/internal/core"
 	"github.com/microsoft/typescript-go/internal/diagnostics"
@@ -29,6 +28,7 @@ type CodeFixContext struct {
 	SourceFile *ast.SourceFile
 	Span       core.TextRange
 	ErrorCode  int32
+	FixID      string
 	Program    *compiler.Program
 	LS         *LanguageService
 	Diagnostic *lsproto.Diagnostic
@@ -39,6 +39,7 @@ type CodeFixContext struct {
 type CodeAction struct {
 	Description       string
 	Changes           []*lsproto.TextEdit
+	FixName           string
 	FixID             string
 	FixAllDescription string
 }
@@ -70,7 +71,7 @@ type CombinedCodeActions struct {
 var codeFixProviders = []*CodeFixProvider{
 	ImportFixProvider,
 	IsolatedDeclarationsFixProvider,
-	// Add more code fix providers here as they are implemented
+	UnusedIdentifierFixProvider,
 }
 
 // ProvideCodeActions returns code actions for the given range and context
@@ -159,15 +160,7 @@ func (l *LanguageService) getFixAllQuickFixes(
 	fixIdSeen map[string]*CodeFixProvider,
 ) ([]lsproto.CommandOrCodeAction, error) {
 	var actions []lsproto.CommandOrCodeAction
-
-	// Deduplicate providers; multiple fixIds may map to the same provider.
-	var seen collections.Set[*CodeFixProvider]
-	for _, provider := range fixIdSeen {
-		if seen.Has(provider) {
-			continue
-		}
-		seen.Add(provider)
-
+	for fixId, provider := range fixIdSeen {
 		if provider.GetAllCodeActions == nil {
 			continue
 		}
@@ -180,24 +173,30 @@ func (l *LanguageService) getFixAllQuickFixes(
 			SourceFile: file,
 			Program:    program,
 			LS:         l,
+			FixID:      fixId,
 		}
+
 		combined, err := provider.GetAllCodeActions(ctx, fixContext)
 		if err != nil {
 			return nil, err
 		}
-		if combined != nil && len(combined.Changes) > 0 {
-			kind := lsproto.CodeActionKindQuickFix
-			changes := map[lsproto.DocumentUri][]*lsproto.TextEdit{
-				uri: combined.Changes,
-			}
-			actions = append(actions, lsproto.CommandOrCodeAction{
-				CodeAction: &lsproto.CodeAction{
-					Title: combined.Description,
-					Kind:  &kind,
-					Edit:  &lsproto.WorkspaceEdit{Changes: &changes},
-				},
-			})
+
+		if combined == nil || len(combined.Changes) == 0 {
+			continue
 		}
+
+		kind := lsproto.CodeActionKindQuickFix
+		changes := map[lsproto.DocumentUri][]*lsproto.TextEdit{
+			uri: combined.Changes,
+		}
+		actions = append(actions, lsproto.CommandOrCodeAction{
+			CodeAction: &lsproto.CodeAction{
+				Title: combined.Description,
+				Kind:  &kind,
+				Edit:  &lsproto.WorkspaceEdit{Changes: &changes},
+				Data:  &lsproto.CodeActionData{FixID: fixId},
+			},
+		})
 	}
 
 	return actions, nil
@@ -263,18 +262,22 @@ func (l *LanguageService) createFixAllAction(
 		if provider.GetAllCodeActions == nil {
 			continue
 		}
+		for _, fixID := range provider.FixIds {
+			fixContext := &CodeFixContext{
+				SourceFile: file,
+				Program:    program,
+				LS:         l,
+				FixID:      fixID,
+			}
+			combined, err := provider.GetAllCodeActions(ctx, fixContext)
+			if err != nil {
+				return nil, err
+			}
 
-		fixContext := &CodeFixContext{
-			SourceFile: file,
-			Program:    program,
-			LS:         l,
-		}
+			if combined == nil || len(combined.Changes) == 0 {
+				continue
+			}
 
-		combined, err := provider.GetAllCodeActions(ctx, fixContext)
-		if err != nil {
-			return nil, err
-		}
-		if combined != nil && len(combined.Changes) > 0 {
 			lspChanges[uri] = append(lspChanges[uri], combined.Changes...)
 		}
 	}
@@ -380,12 +383,20 @@ func convertToLSPCodeAction(action *CodeAction, diag *lsproto.Diagnostic, uri ls
 	}
 	diagnostics := []*lsproto.Diagnostic{diag}
 
+	var data *lsproto.CodeActionData
+	if action.FixName != "" {
+		data = &lsproto.CodeActionData{
+			FixName: action.FixName,
+		}
+	}
+
 	return lsproto.CommandOrCodeAction{
 		CodeAction: &lsproto.CodeAction{
 			Title:       action.Description,
 			Kind:        &kind,
 			Edit:        &lsproto.WorkspaceEdit{Changes: &changes},
 			Diagnostics: &diagnostics,
+			Data:        data,
 		},
 	}
 }

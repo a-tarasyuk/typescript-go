@@ -29582,8 +29582,10 @@ type TypeHierarchyItemData struct{}
 // InlayHintData is a placeholder for custom data preserved on a InlayHint.
 type InlayHintData struct{}
 
-// CodeActionData is a placeholder for custom data preserved on a CodeAction.
-type CodeActionData struct{}
+type CodeActionData struct {
+	FixName string `json:"fixName,omitempty"`
+	FixID   string `json:"fixId,omitempty"`
+}
 
 // WorkspaceSymbolData is a placeholder for custom data preserved on a WorkspaceSymbol.
 type WorkspaceSymbolData struct{}
