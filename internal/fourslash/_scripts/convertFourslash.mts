@@ -34,6 +34,7 @@ const allowedCodeFixIds = new Set([
     "fixMissingImport",
     "fixMissingTypeAnnotationOnExports",
     "fixClassIncorrectlyImplementsInterface",
+    "convertLiteralTypeToMappedType",
 ]);
 
 // File name prefixes for code fix tests that are allowed even without a fixId.
@@ -54,6 +55,7 @@ const allowedCodeFixDescriptionPrefixes = [
     "Extract binding expressions to variable",
     "Extract to variable and replace with",
     "Mark array literal as const",
+    "Convert_0_to_1_in_0",
 ];
 
 function getManualTests(): Set<string> {
@@ -183,11 +185,11 @@ function validateCodeFixCommands(commands: Cmd[]): void {
     if (hasCodeFixOrAvailable && !hasAllowedCodeFixAll) {
         const allAllowed = commands.every(c => {
             if (c.kind === "verifyCodeFix") {
-                return allowedCodeFixDescriptionPrefixes.some(p => c.description.startsWith(p));
+                return isAllowedCodeFixDescription(c.description);
             }
             if (c.kind === "verifyCodeFixAvailable") {
                 // Empty descriptions means "assert no fixes available", which is always allowed.
-                return c.descriptions.length === 0 || c.descriptions.every(d => allowedCodeFixDescriptionPrefixes.some(p => d.startsWith(p)));
+                return c.descriptions.length === 0 || c.descriptions.every(isAllowedCodeFixDescription);
             }
             return true;
         });
@@ -195,6 +197,10 @@ function validateCodeFixCommands(commands: Cmd[]): void {
             throw new Error(`Code fix test has no allowed fixId and descriptions do not match any allowed prefix`);
         }
     }
+}
+
+function isAllowedCodeFixDescription(description: CodeFixDescription): boolean {
+    return allowedCodeFixDescriptionPrefixes.some(p => description.text.startsWith(p) || description.diagnostic?.startsWith(p));
 }
 
 function getTestInput(content: string): string {
@@ -1880,7 +1886,7 @@ function parseCodeFixArgs(args: readonly ts.Expression[]): [VerifyCodeFixCmd] {
     }
 
     const sourceFile = args[0].getSourceFile();
-    let description = "";
+    let description: CodeFixDescription = { text: "" };
     let newFileContent: string | undefined;
     let newRangeContent: string | undefined;
     let index = 0;
@@ -1892,16 +1898,14 @@ function parseCodeFixArgs(args: readonly ts.Expression[]): [VerifyCodeFixCmd] {
         if (!name) continue;
         if (ts.isShorthandPropertyAssignment(prop)) {
             if (name === "description") {
-                const resolved = resolveDescriptionExpression(prop.name, sourceFile);
-                if (resolved) description = resolved;
+                description = parseCodeFixDescription(prop.name, sourceFile) || description;
             }
             continue;
         }
         if (!ts.isPropertyAssignment(prop)) continue;
         switch (name) {
             case "description": {
-                const resolved = resolveDescriptionExpression(prop.initializer, sourceFile);
-                if (resolved) description = resolved;
+                description = parseCodeFixDescription(prop.initializer, sourceFile) || description;
                 break;
             }
             case "newFileContent": {
@@ -1950,7 +1954,7 @@ function parseCodeFixArgs(args: readonly ts.Expression[]): [VerifyCodeFixCmd] {
 function parseCodeFixAvailableArgs(funcName: string, args: readonly ts.Expression[]): [VerifyCodeFixAvailableCmd] {
     switch (funcName) {
         case "codeFixAvailable": {
-            const descriptions: string[] = [];
+            const descriptions: CodeFixDescription[] = [];
             let expectNone = false;
 
             if (args.length === 1) {
@@ -1965,15 +1969,15 @@ function parseCodeFixAvailableArgs(funcName: string, args: readonly ts.Expressio
                         if (obj) {
                             for (const prop of obj.properties) {
                                 if (getPropertyName(prop) === "description") {
-                                    let resolved: string | undefined;
+                                    let description: CodeFixDescription | undefined;
                                     if (ts.isPropertyAssignment(prop)) {
-                                        resolved = resolveDescriptionExpression(prop.initializer, sourceFile);
+                                        description = parseCodeFixDescription(prop.initializer, sourceFile);
                                     }
                                     else if (ts.isShorthandPropertyAssignment(prop)) {
-                                        resolved = resolveDescriptionExpression(prop.name, sourceFile);
+                                        description = parseCodeFixDescription(prop.name, sourceFile);
                                     }
-                                    if (resolved) {
-                                        descriptions.push(resolved);
+                                    if (description) {
+                                        descriptions.push(description);
                                     }
                                 }
                             }
@@ -3800,9 +3804,14 @@ interface VerifyErrorExistsBeforeMarkerCmd {
     markerName: string;
 }
 
+interface CodeFixDescription {
+    text: string;
+    diagnostic?: string;
+}
+
 interface VerifyCodeFixCmd {
     kind: "verifyCodeFix";
-    description: string;
+    description: CodeFixDescription;
     newFileContent?: string;
     newRangeContent?: string;
     index: number;
@@ -3812,7 +3821,7 @@ interface VerifyCodeFixCmd {
 
 interface VerifyCodeFixAvailableCmd {
     kind: "verifyCodeFixAvailable";
-    descriptions: string[];
+    descriptions: CodeFixDescription[];
     unavailableDescriptions: string[];
     expectNone: boolean;
 }
@@ -4258,7 +4267,7 @@ function generateCmd(cmd: Cmd, imports: Set<string>): string {
             return `f.VerifyErrorExistsBeforeMarker(t, ${getGoStringLiteral(cmd.markerName)})`;
         case "verifyCodeFix":
             return `f.VerifyCodeFix(t, fourslash.VerifyCodeFixOptions{
-	Description: ${getGoStringLiteral(cmd.description)},
+	Description: ${getGoStringLiteral(cmd.description.text)},
 ${
                 cmd.newRangeContent !== undefined
                     ? `\tNewRangeContent: ${getGoMultiLineStringLiteral(cmd.newRangeContent)},`
@@ -4282,7 +4291,7 @@ ${
             if (cmd.descriptions.length === 0) {
                 return `f.VerifyCodeFixAvailable(t, nil)`;
             }
-            return `f.VerifyCodeFixAvailable(t, []string{${cmd.descriptions.map(d => getGoStringLiteral(d)).join(", ")}})`;
+            return `f.VerifyCodeFixAvailable(t, []string{${cmd.descriptions.map(d => getGoStringLiteral(d.text)).join(", ")}})`;
         case "verifyRangeAfterCodeFix":
             return `f.VerifyRangeAfterCodeFix(t, ${getGoMultiLineStringLiteral(cmd.expectedText)}, ${cmd.includeWhiteSpace}, ${cmd.errorCode}, ${cmd.index})`;
         case "verifyCodeFixAll":
@@ -4460,6 +4469,30 @@ function resolveDescriptionExpression(expr: ts.Expression, sourceFile: ts.Source
                     }
                 }
             }
+        }
+    }
+
+    return undefined;
+}
+
+function parseCodeFixDescription(expr: ts.Expression, sourceFile: ts.SourceFile): CodeFixDescription | undefined {
+    const text = resolveDescriptionExpression(expr, sourceFile);
+    return text === undefined ? undefined : { text, diagnostic: getDiagnosticMessageName(expr) };
+}
+
+function getDiagnosticMessageName(expr: ts.Expression): string | undefined {
+    if (ts.isArrayLiteralExpression(expr) && expr.elements.length > 0) {
+        return getDiagnosticMessageName(expr.elements[0]);
+    }
+
+    if (ts.isPropertyAccessExpression(expr) && expr.name.text === "message") {
+        const inner = expr.expression;
+        if (
+            ts.isPropertyAccessExpression(inner) && ts.isPropertyAccessExpression(inner.expression)
+            && ts.isIdentifier(inner.expression.name) && inner.expression.name.text === "Diagnostics"
+            && ts.isIdentifier(inner.name)
+        ) {
+            return inner.name.text;
         }
     }
 

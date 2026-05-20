@@ -71,6 +71,7 @@ var codeFixProviders = []*CodeFixProvider{
 	ImportFixProvider,
 	IsolatedDeclarationsFixProvider,
 	FixClassIncorrectlyImplementsInterfaceProvider,
+	ConvertLiteralTypeToMappedTypeProvider,
 	// Add more code fix providers here as they are implemented
 }
 
