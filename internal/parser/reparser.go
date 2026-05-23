@@ -234,7 +234,7 @@ func (p *Parser) gatherTypeParameters(j *ast.Node, tagWithTypeParameters *ast.No
 		if other == tagWithTypeParameters {
 			break
 		}
-		if other.Kind == ast.KindJSDocTypedefTag || other.Kind == ast.KindJSDocCallbackTag || other.Kind == ast.KindJSDocOverloadTag {
+		if other.Kind == ast.KindJSDocTypedefTag || other.Kind == ast.KindJSDocCallbackTag {
 			start = i + 1
 		}
 	}

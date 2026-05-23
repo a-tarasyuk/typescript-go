@@ -1,0 +1,47 @@
+//// [tests/cases/conformance/jsdoc/jsdocOverloadTag.ts] ////
+
+=== a.js ===
+const f1 =
+>f1 : Symbol(f1, Decl(a.js, 0, 5))
+
+/**
+ * @template T
+ * @param {T} value
+ * @param {T=} other
+ *
+ * @overload
+ * @param {T} value
+ * @return {T}
+ *
+ * @overload
+ * @param {T} value
+ * @param {T} other
+ * @return {T}
+ */ (value, other) => value;
+>value : Symbol(value, Decl(a.js, 14, 5))
+>other : Symbol(other, Decl(a.js, 14, 11))
+>value : Symbol(value, Decl(a.js, 14, 5))
+
+/**
+ * @template T
+ * @param {T} value
+ * @param {T=} other
+ *
+ * @overload
+ * @param {T} value
+ * @return {T}
+ *
+ * @overload
+ * @param {T} value
+ * @param {T} other
+ * @return {T}
+ */
+function f2(value, other) {
+>f2 : Symbol(f2, Decl(a.js, 21, 4), Decl(a.js, 25, 4), Decl(a.js, 14, 28))
+>value : Symbol(value, Decl(a.js, 30, 12))
+>other : Symbol(other, Decl(a.js, 30, 18))
+
+    return value;
+>value : Symbol(value, Decl(a.js, 30, 12))
+}
+
