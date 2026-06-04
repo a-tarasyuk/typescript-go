@@ -1844,7 +1844,7 @@ func IsInstanceOfExpression(node *Node) bool {
 }
 
 func IsAnyImportOrReExport(node *Node) bool {
-	return IsImportNode(node) || IsExportDeclaration(node)
+	return IsImportNode(node) || IsExportDeclaration(node) || IsJSExportDeclaration(node)
 }
 
 func IsImportNode(node *Node) bool {
@@ -1868,7 +1868,7 @@ func IsInJsonFile(node *Node) bool {
 
 func GetExternalModuleName(node *Node) *Expression {
 	switch node.Kind {
-	case KindImportDeclaration, KindJSImportDeclaration, KindExportDeclaration:
+	case KindImportDeclaration, KindJSImportDeclaration, KindExportDeclaration, KindJSExportDeclaration, KindJSDocExportTag:
 		return node.ModuleSpecifier()
 	case KindImportEqualsDeclaration:
 		if node.AsImportEqualsDeclaration().ModuleReference.Kind == KindExternalModuleReference {
@@ -1892,7 +1892,7 @@ func GetImportAttributes(node *Node) *Node {
 	switch node.Kind {
 	case KindImportDeclaration, KindJSImportDeclaration:
 		return node.AsImportDeclaration().Attributes
-	case KindExportDeclaration:
+	case KindExportDeclaration, KindJSExportDeclaration:
 		return node.AsExportDeclaration().Attributes
 	}
 	panic("Unhandled case in getImportAttributes")
@@ -2894,12 +2894,14 @@ func IsTypeOnlyImportOrExportDeclaration(node *Node) bool {
 
 func IsExclusivelyTypeOnlyImportOrExport(node *Node) bool {
 	switch node.Kind {
-	case KindExportDeclaration:
+	case KindExportDeclaration, KindJSExportDeclaration:
 		return node.IsTypeOnly()
 	case KindImportDeclaration, KindJSImportDeclaration:
 		if importClause := node.ImportClause(); importClause != nil {
 			return importClause.AsImportClause().IsTypeOnly()
 		}
+	case KindJSDocExportTag:
+		return true
 	case KindJSDocImportTag:
 		if importClause := node.ImportClause(); importClause != nil {
 			return importClause.AsImportClause().IsTypeOnly()
@@ -3170,7 +3172,7 @@ func IsResolutionModeOverrideHost(node *Node) bool {
 		return false
 	}
 	switch node.Kind {
-	case KindImportType, KindExportDeclaration, KindImportDeclaration, KindJSImportDeclaration:
+	case KindImportType, KindExportDeclaration, KindImportDeclaration, KindJSImportDeclaration, KindJSDocExportTag:
 		return true
 	}
 	return false
@@ -3188,6 +3190,8 @@ func HasResolutionModeOverride(node *Node) bool {
 		attributes = node.AsImportDeclaration().Attributes
 	case KindExportDeclaration:
 		attributes = node.AsExportDeclaration().Attributes
+	case KindJSDocExportTag:
+		attributes = node.AsJSDocExportTag().Attributes
 	}
 	if attributes != nil {
 		_, ok := attributes.GetResolutionModeOverride()
@@ -3776,7 +3780,7 @@ func hasComment(kind Kind) bool {
 		KindJSDocReadonlyTag, KindJSDocOverrideTag, KindJSDocCallbackTag, KindJSDocOverloadTag,
 		KindJSDocParameterTag, KindJSDocPropertyTag, KindJSDocReturnTag, KindJSDocThisTag,
 		KindJSDocTypeTag, KindJSDocTemplateTag, KindJSDocTypedefTag, KindJSDocSeeTag,
-		KindJSDocThrowsTag, KindJSDocSatisfiesTag, KindJSDocImportTag:
+		KindJSDocThrowsTag, KindJSDocSatisfiesTag, KindJSDocImportTag, KindJSDocExportTag:
 		return true
 	default:
 		return false
@@ -4125,7 +4129,7 @@ func ImportFromModuleSpecifier(node *Node) *Node {
 
 func TryGetImportFromModuleSpecifier(node *StringLiteralLike) *Node {
 	switch node.Parent.Kind {
-	case KindImportDeclaration, KindJSImportDeclaration, KindExportDeclaration:
+	case KindImportDeclaration, KindJSImportDeclaration, KindExportDeclaration, KindJSExportDeclaration, KindJSDocExportTag:
 		return node.Parent
 	case KindExternalModuleReference:
 		return node.Parent.Parent
@@ -4151,11 +4155,33 @@ func IsImplicitlyExportedJSDocDeclaration(node *Node) bool {
 		return false
 	}
 	if IsJSTypeAliasDeclaration(node) {
-		return true
+		return !isExplicitlyExportedJSTypeAliasDeclaration(node)
 	}
 	// A reparsed ModuleDeclaration synthesized from a JSDoc @typedef/@callback
 	// dotted name should also be treated as implicitly exported in modules.
 	return IsModuleDeclaration(node) && node.Flags&NodeFlagsReparsed != 0
+}
+
+func isExplicitlyExportedJSTypeAliasDeclaration(node *Node) bool {
+	name := node.Name()
+	if name == nil {
+		return false
+	}
+	for _, statement := range node.Parent.Statements() {
+		if !IsJSExportDeclaration(statement) {
+			continue
+		}
+		exportDecl := statement.AsExportDeclaration()
+		if exportDecl.ModuleSpecifier != nil || !exportDecl.IsTypeOnly || exportDecl.ExportClause == nil || !IsNamedExports(exportDecl.ExportClause) {
+			continue
+		}
+		for _, specifier := range exportDecl.ExportClause.AsNamedExports().Elements.Nodes {
+			if specifier.PropertyNameOrName().Text() == name.Text() {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func HasContextSensitiveParameters(node *Node) bool {

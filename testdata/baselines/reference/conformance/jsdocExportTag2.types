@@ -1,0 +1,27 @@
+//// [tests/cases/conformance/jsdoc/jsdocExportTag2.ts] ////
+
+=== /a.js ===
+class C {}
+>C : C
+
+/** @export { C, C as C2, C as default } */
+
+=== /b.js ===
+/** @import { C, C2 } from "./a" */
+/** @import D from "./a" */
+
+/** @type {C} */
+export const a = 1;
+>a : C
+>1 : 1
+
+/** @type {C2} */
+export const b = 1;
+>b : C
+>1 : 1
+
+/** @type {D} */
+export const c = 1;
+>c : C
+>1 : 1
+

@@ -840,6 +840,8 @@ func (n *Node) TagName() *Node {
 		return n.AsJSDocThrowsTag().TagName
 	case KindJSDocImportTag:
 		return n.AsJSDocImportTag().TagName
+	case KindJSDocExportTag:
+		return n.AsJSDocExportTag().TagName
 	}
 	panic("Unhandled case in Node.TagName: " + n.Kind.String())
 }
@@ -872,7 +874,7 @@ func (n *Node) IsTypeOnly() bool {
 		return n.AsImportSpecifier().IsTypeOnly
 	case KindImportClause:
 		return n.AsImportClause().PhaseModifier == KindTypeKeyword
-	case KindExportDeclaration:
+	case KindExportDeclaration, KindJSExportDeclaration:
 		return n.AsExportDeclaration().IsTypeOnly
 	case KindExportSpecifier:
 		return n.AsExportSpecifier().IsTypeOnly
@@ -927,6 +929,8 @@ func (n *Node) CommentList() *NodeList {
 		return n.AsJSDocThrowsTag().Comment
 	case KindJSDocImportTag:
 		return n.AsJSDocImportTag().Comment
+	case KindJSDocExportTag:
+		return n.AsJSDocExportTag().Comment
 	}
 	panic("Unhandled case in Node.CommentList: " + n.Kind.String())
 }
@@ -975,10 +979,12 @@ func (n *Node) ModuleSpecifier() *Expression {
 	switch n.Kind {
 	case KindImportDeclaration, KindJSImportDeclaration:
 		return n.AsImportDeclaration().ModuleSpecifier
-	case KindExportDeclaration:
+	case KindExportDeclaration, KindJSExportDeclaration:
 		return n.AsExportDeclaration().ModuleSpecifier
 	case KindJSDocImportTag:
 		return n.AsJSDocImportTag().ModuleSpecifier
+	case KindJSDocExportTag:
+		return n.AsJSDocExportTag().ModuleSpecifier
 	}
 	panic("Unhandled case in Node.ModuleSpecifier: " + n.Kind.String())
 }

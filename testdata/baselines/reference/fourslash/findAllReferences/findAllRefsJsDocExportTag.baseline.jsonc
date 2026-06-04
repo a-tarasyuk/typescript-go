@@ -1,0 +1,14 @@
+// === findAllReferences ===
+// === /a.js ===
+// /**
+//  * @export { [|A|]/*FIND ALL REFS*/ } from "./b";
+//  */
+// 
+
+// === /b.ts ===
+// export interface [|A|] { }
+// 
+
+// === /c.ts ===
+// import { [|A|] } from "./a";
+// let a: [|A|];

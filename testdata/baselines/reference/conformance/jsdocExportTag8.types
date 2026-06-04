@@ -1,0 +1,27 @@
+//// [tests/cases/conformance/jsdoc/jsdocExportTag8.ts] ////
+
+=== /a.js ===
+
+/**
+ * @typedef {{ value: string }} T
+ */
+
+/** @export { T } */
+
+=== /b.js ===
+/** @import { T } from "./a" */
+
+/** @type {T} */
+export const a = { value: "" };
+>a : T
+>{ value: "" } : { value: string; }
+>value : string
+>"" : ""
+
+/** @type {T} */
+export const b = { value: 1 };
+>b : T
+>{ value: 1 } : { value: number; }
+>value : number
+>1 : 1
+

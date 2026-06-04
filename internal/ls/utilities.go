@@ -55,7 +55,9 @@ func isModuleSpecifierLike(node *ast.Node) bool {
 
 	return node.Parent.Kind == ast.KindExternalModuleReference ||
 		node.Parent.Kind == ast.KindImportDeclaration ||
-		node.Parent.Kind == ast.KindJSImportDeclaration
+		node.Parent.Kind == ast.KindJSImportDeclaration ||
+		node.Parent.Kind == ast.KindJSExportDeclaration ||
+		node.Parent.Kind == ast.KindJSDocExportTag
 }
 
 func getNonModuleSymbolOfMergedModuleSymbol(symbol *ast.Symbol) *ast.Symbol {
@@ -518,7 +520,7 @@ func getAdjustedLocation(node *ast.Node, forRename bool, sourceFile *ast.SourceF
 		// export /**/type { propertyName as [|name|] } from ...;
 		// export /**/type * from "[|module|]";
 		// export /**/type * as ... from "[|module|]";
-		if ast.IsExportDeclaration(parent) && parent.IsTypeOnly() {
+		if (ast.IsExportDeclaration(parent) || ast.IsJSExportDeclaration(parent)) && parent.IsTypeOnly() {
 			if location := getAdjustedLocationForExportDeclaration(parent.AsExportDeclaration(), forRename); location != nil {
 				return location
 			}
@@ -536,7 +538,7 @@ func getAdjustedLocation(node *ast.Node, forRename bool, sourceFile *ast.SourceF
 			parent.Kind == ast.KindNamespaceExport {
 			return parent.Name()
 		}
-		if parent.Kind == ast.KindExportDeclaration {
+		if parent.Kind == ast.KindExportDeclaration || parent.Kind == ast.KindJSExportDeclaration {
 			if exportClause := parent.AsExportDeclaration().ExportClause; exportClause != nil && exportClause.Kind == ast.KindNamespaceExport {
 				return exportClause.Name()
 			}
@@ -559,7 +561,7 @@ func getAdjustedLocation(node *ast.Node, forRename bool, sourceFile *ast.SourceF
 		// /**/export { propertyName as [|name|] } ...;
 		// /**/export * from "[|module|]";
 		// /**/export * as ... from "[|module|]";
-		if parent.Kind == ast.KindExportDeclaration {
+		if parent.Kind == ast.KindExportDeclaration || parent.Kind == ast.KindJSExportDeclaration {
 			if location := getAdjustedLocationForExportDeclaration(parent.AsExportDeclaration(), forRename); location != nil {
 				return location
 			}
@@ -578,7 +580,7 @@ func getAdjustedLocation(node *ast.Node, forRename bool, sourceFile *ast.SourceF
 	// import ... /**/from "[|module|]";
 	// export ... /**/from "[|module|]";
 	if node.Kind == ast.KindFromKeyword {
-		if (parent.Kind == ast.KindImportDeclaration || parent.Kind == ast.KindExportDeclaration) && parent.ModuleSpecifier() != nil {
+		if (parent.Kind == ast.KindImportDeclaration || parent.Kind == ast.KindExportDeclaration || parent.Kind == ast.KindJSExportDeclaration) && parent.ModuleSpecifier() != nil {
 			return parent.ModuleSpecifier()
 		}
 	}
@@ -860,7 +862,7 @@ func getMeaningFromDeclaration(node *ast.Node) ast.SemanticMeaning {
 		}
 
 	case ast.KindEnumDeclaration, ast.KindNamedImports, ast.KindImportSpecifier, ast.KindImportEqualsDeclaration, ast.KindImportDeclaration,
-		ast.KindJSImportDeclaration, ast.KindExportAssignment, ast.KindExportDeclaration:
+		ast.KindJSImportDeclaration, ast.KindExportAssignment, ast.KindExportDeclaration, ast.KindJSExportDeclaration:
 		return ast.SemanticMeaningAll
 
 	// An external module can be a Value

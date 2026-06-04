@@ -203,6 +203,7 @@ func (tx *DeclarationTransformer) visit(node *ast.Node) *ast.Node {
 		ast.KindImportDeclaration,
 		ast.KindJSImportDeclaration,
 		ast.KindExportDeclaration,
+		ast.KindJSExportDeclaration,
 		ast.KindExportAssignment:
 		return tx.visitDeclarationStatements(node)
 	// statements we elide
@@ -1044,13 +1045,13 @@ func (tx *DeclarationTransformer) visitDeclarationStatements(input *ast.Node) *a
 		return nil
 	}
 	switch input.Kind {
-	case ast.KindExportDeclaration:
+	case ast.KindExportDeclaration, ast.KindJSExportDeclaration:
 		if ast.IsSourceFile(input.Parent) {
 			tx.resultHasExternalModuleIndicator = true
 		}
 		tx.resultHasScopeMarker = true
 		// Rewrite external module names if necessary
-		return tx.Factory().UpdateExportDeclaration(
+		res := tx.Factory().UpdateExportDeclaration(
 			input.AsExportDeclaration(),
 			input.Modifiers(),
 			input.IsTypeOnly(),
@@ -1058,6 +1059,12 @@ func (tx *DeclarationTransformer) visitDeclarationStatements(input *ast.Node) *a
 			tx.rewriteModuleSpecifier(input, input.ModuleSpecifier()),
 			tx.tryGetResolutionModeOverride(input.AsExportDeclaration().Attributes),
 		)
+		if res != nil && res.Kind != ast.KindExportDeclaration {
+			res := res.Clone(tx.Factory())
+			res.Kind = ast.KindExportDeclaration
+			return res
+		}
+		return res
 	case ast.KindExportAssignment:
 		return tx.transformExportAssignment(input, input, input.Expression(), input.AsExportAssignment().IsExportEquals)
 	default:

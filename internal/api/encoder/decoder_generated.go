@@ -1026,6 +1026,14 @@ func (d *astDecoder) createChildrenNode(kind ast.Kind, data uint32, childIndices
 		attributes := d.nodeAt(it.nextIf(mask, 3))
 		comment := d.nodeListAt(it.nextIf(mask, 4))
 		return d.factory.NewJSDocImportTag(tagName, importClause, moduleSpecifier, attributes, comment), nil
+	case ast.KindJSDocExportTag:
+		it := newChildIter(childIndices)
+		tagName := d.nodeAt(it.nextIf(mask, 0))
+		exportClause := d.nodeAt(it.nextIf(mask, 1))
+		moduleSpecifier := d.nodeAt(it.nextIf(mask, 2))
+		attributes := d.nodeAt(it.nextIf(mask, 3))
+		comment := d.nodeListAt(it.nextIf(mask, 4))
+		return d.factory.NewJSDocExportTag(tagName, exportClause, moduleSpecifier, attributes, comment), nil
 	case ast.KindJSDocCallbackTag:
 		it := newChildIter(childIndices)
 		tagName := d.nodeAt(it.nextIf(mask, 0))
@@ -1071,13 +1079,16 @@ func (d *astDecoder) createChildrenNode(kind ast.Kind, data uint32, childIndices
 		name := d.nodeAt(it.nextIf(mask, 1))
 		moduleReference := d.nodeAt(it.nextIf(mask, 2))
 		return d.factory.NewImportEqualsDeclaration(modifiers, isTypeOnly, name, moduleReference), nil
-	case ast.KindExportDeclaration:
+	case ast.KindExportDeclaration, ast.KindJSExportDeclaration:
 		isTypeOnly := commonData&1 != 0
 		it := newChildIter(childIndices)
 		modifiers := d.modifierListAt(it.nextIf(mask, 0))
 		exportClause := d.nodeAt(it.nextIf(mask, 1))
 		moduleSpecifier := d.nodeAt(it.nextIf(mask, 2))
 		attributes := d.nodeAt(it.nextIf(mask, 3))
+		if kind == ast.KindJSExportDeclaration {
+			return d.factory.NewJSExportDeclaration(modifiers, isTypeOnly, exportClause, moduleSpecifier, attributes), nil
+		}
 		return d.factory.NewExportDeclaration(modifiers, isTypeOnly, exportClause, moduleSpecifier, attributes), nil
 	case ast.KindImportType:
 		isTypeOf := commonData&1 != 0

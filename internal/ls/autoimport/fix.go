@@ -916,7 +916,7 @@ func detectSyntaxIndicators(file *ast.SourceFile, options *core.CompilerOptions)
 			continue
 		}
 		switch parent.Kind {
-		case ast.KindImportDeclaration, ast.KindJSImportDeclaration, ast.KindExportDeclaration:
+		case ast.KindImportDeclaration, ast.KindJSImportDeclaration, ast.KindExportDeclaration, ast.KindJSExportDeclaration:
 			return true, hasCJS
 		case ast.KindExternalModuleReference:
 			// import x = require("...") — this is ESM-ish syntax

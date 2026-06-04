@@ -335,7 +335,7 @@ func (l *LanguageService) getStringLiteralCompletionEntries(
 			}
 		}
 		fallthrough // is `require("")` or `require(""` or `import("")`
-	case ast.KindImportDeclaration, ast.KindExportDeclaration, ast.KindExternalModuleReference, ast.KindJSDocImportTag:
+	case ast.KindImportDeclaration, ast.KindExportDeclaration, ast.KindExternalModuleReference, ast.KindJSDocImportTag, ast.KindJSDocExportTag:
 		// Get all known external module names or complete a path to a module
 		// i.e. import * as ns from "/*completion position*/";
 		//      var y = import("/*completion position*/");

@@ -95,7 +95,7 @@ func isFileProbablyExternalModule(sourceFile *SourceFile) *Node {
 func isAnExternalModuleIndicatorNode(node *Node) bool {
 	return HasSyntacticModifier(node, ModifierFlagsExport) ||
 		IsImportEqualsDeclaration(node) && IsExternalModuleReference(node.AsImportEqualsDeclaration().ModuleReference) ||
-		IsImportDeclaration(node) || IsExportAssignment(node) || IsExportDeclaration(node)
+		IsImportDeclaration(node) || IsExportAssignment(node) || IsExportDeclaration(node) || IsJSExportDeclaration(node)
 }
 
 func getImportMetaIfNecessary(sourceFile *SourceFile) *Node {

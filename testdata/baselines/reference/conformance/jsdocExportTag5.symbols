@@ -1,0 +1,17 @@
+//// [tests/cases/conformance/jsdoc/jsdocExportTag5.ts] ////
+
+=== /types.d.ts ===
+export interface I {}
+>I : Symbol(I, Decl(types.d.ts, 0, 0))
+
+=== /a.js ===
+
+/** @export * from "./types" */
+
+=== /b.js ===
+/** @import { I } from "./a" */
+
+/** @type {I | undefined} */
+export let value;
+>value : Symbol(value, Decl(b.js, 3, 10))
+

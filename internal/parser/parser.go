@@ -2273,7 +2273,7 @@ func (p *Parser) parseImportDeclarationOrImportEqualsDeclaration(pos int, jsdoc 
 	importClause := p.tryParseImportClause(identifier, afterImportPos, phaseModifier, false /*skipJSDocLeadingAsterisks*/)
 	p.statementHasAwaitIdentifier = saveHasAwaitIdentifier // import clause is always parsed in an Await context
 	moduleSpecifier := p.parseModuleSpecifier()
-	attributes := p.tryParseImportAttributes()
+	attributes := p.tryParseImportAttributes(false /*requireNoPrecedingLineBreak*/)
 	p.parseSemicolon()
 	result := p.finishNode(p.factory.NewImportDeclaration(modifiers, importClause, moduleSpecifier, attributes), pos)
 	p.withJSDoc(result, jsdoc)
@@ -2499,8 +2499,10 @@ func (p *Parser) parseModuleExportName(disallowKeywords bool) (node *ast.Node, n
 	return p.parseIdentifierName(), nameOk
 }
 
-func (p *Parser) tryParseImportAttributes() *ast.Node {
-	if p.token == ast.KindWithKeyword || (p.token == ast.KindAssertKeyword && !p.hasPrecedingLineBreak()) {
+func (p *Parser) tryParseImportAttributes(requireNoPrecedingLineBreak bool) *ast.Node {
+	hasPrecedingLineBreak := p.hasPrecedingLineBreak()
+	if p.token == ast.KindWithKeyword && (!requireNoPrecedingLineBreak || !hasPrecedingLineBreak) ||
+		p.token == ast.KindAssertKeyword && !hasPrecedingLineBreak {
 		if p.token == ast.KindAssertKeyword {
 			p.parseErrorAtCurrentToken(diagnostics.Import_assertions_have_been_replaced_by_import_attributes_Use_with_instead_of_assert)
 		}
@@ -2546,10 +2548,28 @@ func (p *Parser) parseExportDeclaration(pos int, jsdoc jsdocScannerInfo, modifie
 	saveContextFlags := p.contextFlags
 	saveHasAwaitIdentifier := p.statementHasAwaitIdentifier
 	p.setContextFlags(ast.NodeFlagsAwaitContext, true)
-	var exportClause *ast.Node
-	var moduleSpecifier *ast.Expression
-	var attributes *ast.Node
 	isTypeOnly := p.parseOptional(ast.KindTypeKeyword)
+	exportClause, moduleSpecifier := p.parseExportClauseAndModuleSpecifier(false /*skipJSDocLeadingAsterisks*/)
+	var attributes *ast.Node
+	if moduleSpecifier != nil {
+		attributes = p.tryParseImportAttributes(true /*requireNoPrecedingLineBreak*/)
+	}
+	p.parseSemicolon()
+	p.contextFlags = saveContextFlags
+	p.statementHasAwaitIdentifier = saveHasAwaitIdentifier
+	result := p.finishNode(p.factory.NewExportDeclaration(modifiers, isTypeOnly, exportClause, moduleSpecifier, attributes), pos)
+	p.withJSDoc(result, jsdoc)
+	p.checkJSSyntax(result)
+	return result
+}
+
+func (p *Parser) parseExportClauseAndModuleSpecifier(skipJSDocLeadingAsterisks bool) (*ast.NamedExportBindings, *ast.Expression) {
+	if skipJSDocLeadingAsterisks {
+		p.scanner.SetSkipJSDocLeadingAsterisks(true)
+	}
+
+	var exportClause *ast.NamedExportBindings
+	var moduleSpecifier *ast.Expression
 	namespaceExportPos := p.nodePos()
 	if p.parseOptional(ast.KindAsteriskToken) {
 		if p.parseOptional(ast.KindAsKeyword) {
@@ -2567,19 +2587,10 @@ func (p *Parser) parseExportDeclaration(pos int, jsdoc jsdocScannerInfo, modifie
 			moduleSpecifier = p.parseModuleSpecifier()
 		}
 	}
-	if moduleSpecifier != nil && (p.token == ast.KindWithKeyword || p.token == ast.KindAssertKeyword) && !p.hasPrecedingLineBreak() {
-		if p.token == ast.KindAssertKeyword {
-			p.parseErrorAtCurrentToken(diagnostics.Import_assertions_have_been_replaced_by_import_attributes_Use_with_instead_of_assert)
-		}
-		attributes = p.parseImportAttributes(p.token, false /*skipKeyword*/)
+	if skipJSDocLeadingAsterisks {
+		p.scanner.SetSkipJSDocLeadingAsterisks(false)
 	}
-	p.parseSemicolon()
-	p.contextFlags = saveContextFlags
-	p.statementHasAwaitIdentifier = saveHasAwaitIdentifier
-	result := p.finishNode(p.factory.NewExportDeclaration(modifiers, isTypeOnly, exportClause, moduleSpecifier, attributes), pos)
-	p.withJSDoc(result, jsdoc)
-	p.checkJSSyntax(result)
-	return result
+	return exportClause, moduleSpecifier
 }
 
 func (p *Parser) parseNamespaceExport(pos int) *ast.Node {

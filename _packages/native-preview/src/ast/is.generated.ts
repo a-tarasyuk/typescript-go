@@ -126,6 +126,7 @@ import type {
     JSDocCallbackTag,
     JSDocComment,
     JSDocDeprecatedTag,
+    JSDocExportTag,
     JSDocFullName,
     JSDocImplementsTag,
     JSDocImportTag,
@@ -1014,6 +1015,10 @@ export function isJSDocImportTag(node: Node): node is JSDocImportTag {
     return node.kind === SyntaxKind.JSDocImportTag;
 }
 
+export function isJSDocExportTag(node: Node): node is JSDocExportTag {
+    return node.kind === SyntaxKind.JSDocExportTag;
+}
+
 export function isJSDocCallbackTag(node: Node): node is JSDocCallbackTag {
     return node.kind === SyntaxKind.JSDocCallbackTag;
 }
@@ -1043,7 +1048,13 @@ export function isImportEqualsDeclaration(node: Node): node is ImportEqualsDecla
 }
 
 export function isExportDeclaration(node: Node): node is ExportDeclaration {
-    return node.kind === SyntaxKind.ExportDeclaration;
+    switch (node.kind) {
+        case SyntaxKind.ExportDeclaration:
+        case SyntaxKind.JSExportDeclaration:
+            return true;
+        default:
+            return false;
+    }
 }
 
 export function isImportTypeNode(node: Node): node is ImportTypeNode {

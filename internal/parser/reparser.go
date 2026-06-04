@@ -108,6 +108,11 @@ func (p *Parser) reparseUnhosted(tag *ast.Node, parent *ast.Node, jsDoc *ast.Nod
 		)
 		p.finishReparsedNode(importDeclaration, tag)
 		p.reparseList = append(p.reparseList, importDeclaration)
+	case ast.KindJSDocExportTag:
+		exportTag := tag.AsJSDocExportTag()
+		exportDeclaration := p.factory.NewJSExportDeclaration(p.factory.DeepCloneReparseModifiers(exportTag.Modifiers()), true /*isTypeOnly*/, p.addDeepCloneReparse(exportTag.ExportClause), p.addDeepCloneReparse(exportTag.ModuleSpecifier), p.addDeepCloneReparse(exportTag.Attributes))
+		p.finishReparsedNode(exportDeclaration, tag)
+		p.reparseList = append(p.reparseList, exportDeclaration)
 	case ast.KindJSDocOverloadTag:
 		// Create overload signatures only for function, method, and constructor declarations outside object literals
 		if (ast.IsFunctionDeclaration(parent) || ast.IsMethodDeclaration(parent) || ast.IsConstructorDeclaration(parent)) && p.parsingContexts&(1<<PCObjectLiteralMembers) == 0 {

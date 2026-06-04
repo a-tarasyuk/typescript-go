@@ -1,0 +1,37 @@
+//// [tests/cases/conformance/jsdoc/jsdocExportTag3.ts] ////
+
+=== /types.d.ts ===
+export interface I {
+    a: number
+>a : number
+}
+
+=== /a.js ===
+
+/** @export { I } from "./types" */
+
+=== /b.js ===
+/** @import { I } from "./a" */
+
+/** @type {I} */
+export const a = {
+>a : I
+>{    a: 1} : { a: number; }
+
+    a: 1
+>a : number
+>1 : 1
+
+};
+
+/** @type {I} */
+export const b = {
+>b : I
+>{    a: ""} : { a: string; }
+
+    a: ""
+>a : string
+>"" : ""
+
+};
+

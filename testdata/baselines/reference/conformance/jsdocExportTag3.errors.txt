@@ -1,0 +1,27 @@
+/b.js(10,5): error TS2322: Type 'string' is not assignable to type 'number'.
+
+
+==== /types.d.ts (0 errors) ====
+    export interface I {
+        a: number
+    }
+    
+==== /a.js (0 errors) ====
+    /** @export { I } from "./types" */
+    
+==== /b.js (1 errors) ====
+    /** @import { I } from "./a" */
+    
+    /** @type {I} */
+    export const a = {
+        a: 1
+    };
+    
+    /** @type {I} */
+    export const b = {
+        a: ""
+        ~
+!!! error TS2322: Type 'string' is not assignable to type 'number'.
+!!! related TS6500 /types.d.ts:2:5: The expected type comes from property 'a' which is declared here on type 'I'
+    };
+    

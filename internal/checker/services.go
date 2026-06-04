@@ -464,6 +464,7 @@ func (c *Checker) GetExportSymbolOfSymbol(symbol *ast.Symbol) *ast.Symbol {
 
 func (c *Checker) GetExportSpecifierLocalTargetSymbol(node *ast.Node) *ast.Symbol {
 	// node should be ExportSpecifier | Identifier
+	node = ast.GetReparsedNodeForNode(node)
 	switch node.Kind {
 	case ast.KindExportSpecifier:
 		if node.Parent.Parent.ModuleSpecifier() != nil {

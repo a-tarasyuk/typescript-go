@@ -117,7 +117,7 @@ func forEachImport(program *compiler.Program, sourceFile *ast.SourceFile, action
 	} else {
 		forEachPossibleImportOrExportStatement(sourceFile.AsNode(), func(node *ast.Node) bool {
 			switch node.Kind {
-			case ast.KindExportDeclaration, ast.KindImportDeclaration, ast.KindJSImportDeclaration:
+			case ast.KindExportDeclaration, ast.KindJSExportDeclaration, ast.KindImportDeclaration, ast.KindJSImportDeclaration:
 				if specifier := node.ModuleSpecifier(); specifier != nil && ast.IsStringLiteral(specifier) {
 					action(node, specifier)
 				}
@@ -278,7 +278,7 @@ func getImportersForExport(
 					addIndirectUser(getSourceFileLikeForImportDeclaration(direct), false)
 					// Add a check for indirect uses to handle synthetic default imports
 				}
-			case ast.KindExportDeclaration:
+			case ast.KindExportDeclaration, ast.KindJSExportDeclaration:
 				exportClause := direct.AsExportDeclaration().ExportClause
 				if exportClause == nil {
 					// This is `export * from "foo"`, so imports of this module may import the export too.
@@ -329,7 +329,7 @@ func getContainingModuleSymbol(importer *ast.Node, checker *checker.Checker) *as
 func findNamespaceReExports(sourceFileLike *ast.Node, name *ast.Node, checker *checker.Checker) bool {
 	namespaceImportSymbol := checker.GetSymbolAtLocation(name)
 	return forEachPossibleImportOrExportStatement(sourceFileLike, func(statement *ast.Node) bool {
-		if !ast.IsExportDeclaration(statement) {
+		if !ast.IsExportDeclaration(statement) && !ast.IsJSExportDeclaration(statement) {
 			return false
 		}
 		exportClause := statement.AsExportDeclaration().ExportClause
@@ -426,7 +426,7 @@ func getSearchesFromDirectImports(
 		if !ast.IsStringLiteral(decl.ModuleSpecifier()) {
 			return
 		}
-		if ast.IsExportDeclaration(decl) {
+		if ast.IsExportDeclaration(decl) || ast.IsJSExportDeclaration(decl) {
 			if exportClause := decl.AsExportDeclaration().ExportClause; exportClause != nil && ast.IsNamedExports(exportClause) {
 				searchForNamedImport(exportClause)
 			}

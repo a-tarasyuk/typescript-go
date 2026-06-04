@@ -65,6 +65,7 @@ import type {
     JSDocAugmentsTag,
     JSDocCallbackTag,
     JSDocDeprecatedTag,
+    JSDocExportTag,
     JSDocImplementsTag,
     JSDocImportTag,
     JSDocLink,
@@ -241,6 +242,7 @@ import {
     updateJSDocAugmentsTag,
     updateJSDocCallbackTag,
     updateJSDocDeprecatedTag,
+    updateJSDocExportTag,
     updateJSDocImplementsTag,
     updateJSDocImportTag,
     updateJSDocLink,
@@ -1303,6 +1305,14 @@ const visitEachChildTable: Record<number, VisitEachChildFunction> = {
         const _attributes = visitNode(node.attributes, visitor, isImportAttributes);
         const _comment = visitNodes(node.comment, visitor);
         return updateJSDocImportTag(node, _tagName, _importClause, _moduleSpecifier, _attributes, _comment);
+    },
+    [SyntaxKind.JSDocExportTag]: (node: JSDocExportTag, visitor: Visitor): JSDocExportTag => {
+        const _tagName = visitNode(node.tagName, visitor, isIdentifier);
+        const _exportClause = visitNode(node.exportClause, visitor, isNamedExportBindings);
+        const _moduleSpecifier = visitNode(node.moduleSpecifier, visitor, isExpression);
+        const _attributes = visitNode(node.attributes, visitor, isImportAttributes);
+        const _comment = visitNodes(node.comment, visitor);
+        return updateJSDocExportTag(node, _tagName, _exportClause, _moduleSpecifier, _attributes, _comment);
     },
     [SyntaxKind.JSDocCallbackTag]: (node: JSDocCallbackTag, visitor: Visitor): JSDocCallbackTag => {
         const _tagName = visitNode(node.tagName, visitor, isIdentifier);

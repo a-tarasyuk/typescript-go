@@ -479,6 +479,9 @@ func getChildrenPropertyMask(node *ast.Node) uint8 {
 	case ast.KindJSDocImportTag:
 		n := node.AsJSDocImportTag()
 		return (boolToByte(n.TagName != nil) << 0) | (boolToByte(n.ImportClause != nil) << 1) | (boolToByte(n.ModuleSpecifier != nil) << 2) | (boolToByte(n.Attributes != nil) << 3) | (boolToByte(n.Comment != nil) << 4)
+	case ast.KindJSDocExportTag:
+		n := node.AsJSDocExportTag()
+		return (boolToByte(n.TagName != nil) << 0) | (boolToByte(n.ExportClause != nil) << 1) | (boolToByte(n.ModuleSpecifier != nil) << 2) | (boolToByte(n.Attributes != nil) << 3) | (boolToByte(n.Comment != nil) << 4)
 	case ast.KindJSDocCallbackTag:
 		n := node.AsJSDocCallbackTag()
 		return (boolToByte(n.TagName != nil) << 0) | (boolToByte(n.TypeExpression != nil) << 1) | (boolToByte(n.Name() != nil) << 2) | (boolToByte(n.Comment != nil) << 3)
@@ -500,7 +503,7 @@ func getChildrenPropertyMask(node *ast.Node) uint8 {
 	case ast.KindImportEqualsDeclaration:
 		n := node.AsImportEqualsDeclaration()
 		return (boolToByte(hasModifiers(n.Modifiers())) << 0) | (boolToByte(n.Name() != nil) << 1) | (boolToByte(n.ModuleReference != nil) << 2)
-	case ast.KindExportDeclaration:
+	case ast.KindExportDeclaration, ast.KindJSExportDeclaration:
 		n := node.AsExportDeclaration()
 		return (boolToByte(hasModifiers(n.Modifiers())) << 0) | (boolToByte(n.ExportClause != nil) << 1) | (boolToByte(n.ModuleSpecifier != nil) << 2) | (boolToByte(n.Attributes != nil) << 3)
 	case ast.KindImportType:
@@ -629,7 +632,7 @@ func getNodeCommonData(node *ast.Node) uint32 {
 	case ast.KindImportEqualsDeclaration:
 		n := node.AsImportEqualsDeclaration()
 		return uint32(boolToByte(n.IsTypeOnly)) << 24
-	case ast.KindExportDeclaration:
+	case ast.KindExportDeclaration, ast.KindJSExportDeclaration:
 		n := node.AsExportDeclaration()
 		return uint32(boolToByte(n.IsTypeOnly)) << 24
 	case ast.KindImportType:

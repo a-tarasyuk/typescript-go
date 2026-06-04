@@ -1,0 +1,10 @@
+// === findRenameLocations ===
+// === /a.js ===
+// /**
+//  * @export { /*START PREFIX*/A as [|ARENAME|]/*RENAME*/ } from "./b";
+//  */
+// 
+
+// === /c.ts ===
+// import { [|ARENAME|] } from "./a";
+// let a: [|ARENAME|];

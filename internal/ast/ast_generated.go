@@ -422,6 +422,7 @@ type (
 	JSDocThrowsTagNode                = Node
 	JSDocThisTagNode                  = Node
 	JSDocImportTagNode                = Node
+	JSDocExportTagNode                = Node
 	JSDocCallbackTagNode              = Node
 	JSDocOverloadTagNode              = Node
 	JSDocTypedefTagNode               = Node
@@ -7975,6 +7976,54 @@ func IsJSDocImportTag(node *Node) bool {
 }
 
 // ──────────────────────────────────────────────────────────────────────
+// JSDocExportTag
+// ──────────────────────────────────────────────────────────────────────
+
+type JSDocExportTag struct {
+	JSDocTagBase
+	ExportClause    *NamedExportBindings
+	ModuleSpecifier *Expression
+	Attributes      *ImportAttributesNode
+}
+
+func (f *NodeFactory) NewJSDocExportTag(tagName *IdentifierNode, exportClause *NamedExportBindings, moduleSpecifier *Expression, attributes *ImportAttributesNode, comment *NodeList) *Node {
+	data := &JSDocExportTag{}
+	data.TagName = tagName
+	data.ExportClause = exportClause
+	data.ModuleSpecifier = moduleSpecifier
+	data.Attributes = attributes
+	data.Comment = comment
+	return f.newNode(KindJSDocExportTag, data)
+}
+
+func (f *NodeFactory) UpdateJSDocExportTag(node *JSDocExportTag, tagName *IdentifierNode, exportClause *NamedExportBindings, moduleSpecifier *Expression, attributes *ImportAttributesNode, comment *NodeList) *Node {
+	if tagName != node.TagName || exportClause != node.ExportClause || moduleSpecifier != node.ModuleSpecifier || attributes != node.Attributes || comment != node.Comment {
+		return updateNode(f.NewJSDocExportTag(tagName, exportClause, moduleSpecifier, attributes, comment), node.AsNode(), f.hooks)
+	}
+	return node.AsNode()
+}
+
+func (node *JSDocExportTag) ForEachChild(v Visitor) bool {
+	return visit(v, node.TagName) ||
+		visit(v, node.ExportClause) ||
+		visit(v, node.ModuleSpecifier) ||
+		visit(v, node.Attributes) ||
+		visitNodeList(v, node.Comment)
+}
+
+func (node *JSDocExportTag) VisitEachChild(v *NodeVisitor) *Node {
+	return v.Factory.UpdateJSDocExportTag(node, v.visitNode(node.TagName), v.visitNode(node.ExportClause), v.visitNode(node.ModuleSpecifier), v.visitNode(node.Attributes), v.visitNodes(node.Comment))
+}
+
+func (node *JSDocExportTag) Clone(f NodeFactoryCoercible) *Node {
+	return cloneNode(f.AsNodeFactory().NewJSDocExportTag(node.TagName, node.ExportClause, node.ModuleSpecifier, node.Attributes, node.Comment), node.AsNode(), f.AsNodeFactory().hooks)
+}
+
+func IsJSDocExportTag(node *Node) bool {
+	return node.Kind == KindJSDocExportTag
+}
+
+// ──────────────────────────────────────────────────────────────────────
 // JSDocCallbackTag
 // ──────────────────────────────────────────────────────────────────────
 
@@ -8331,9 +8380,26 @@ func (f *NodeFactory) NewExportDeclaration(modifiers *ModifierList, isTypeOnly b
 	return f.newNode(KindExportDeclaration, data)
 }
 
+func (f *NodeFactory) NewJSExportDeclaration(modifiers *ModifierList, isTypeOnly bool, exportClause *NamedExportBindings, moduleSpecifier *Expression, attributes *ImportAttributesNode) *Node {
+	data := &ExportDeclaration{}
+	data.modifiers = modifiers
+	data.IsTypeOnly = isTypeOnly
+	data.ExportClause = exportClause
+	data.ModuleSpecifier = moduleSpecifier
+	data.Attributes = attributes
+	return f.newNode(KindJSExportDeclaration, data)
+}
+
 func (f *NodeFactory) UpdateExportDeclaration(node *ExportDeclaration, modifiers *ModifierList, isTypeOnly bool, exportClause *NamedExportBindings, moduleSpecifier *Expression, attributes *ImportAttributesNode) *Node {
 	if modifiers != node.modifiers || isTypeOnly != node.IsTypeOnly || exportClause != node.ExportClause || moduleSpecifier != node.ModuleSpecifier || attributes != node.Attributes {
-		return updateNode(f.NewExportDeclaration(modifiers, isTypeOnly, exportClause, moduleSpecifier, attributes), node.AsNode(), f.hooks)
+		switch node.Kind {
+		case KindExportDeclaration:
+			return updateNode(f.NewExportDeclaration(modifiers, isTypeOnly, exportClause, moduleSpecifier, attributes), node.AsNode(), f.hooks)
+		case KindJSExportDeclaration:
+			return updateNode(f.NewJSExportDeclaration(modifiers, isTypeOnly, exportClause, moduleSpecifier, attributes), node.AsNode(), f.hooks)
+		default:
+			panic("unexpected kind in UpdateExportDeclaration: " + node.Kind.String())
+		}
 	}
 	return node.AsNode()
 }
@@ -8350,11 +8416,22 @@ func (node *ExportDeclaration) VisitEachChild(v *NodeVisitor) *Node {
 }
 
 func (node *ExportDeclaration) Clone(f NodeFactoryCoercible) *Node {
-	return cloneNode(f.AsNodeFactory().NewExportDeclaration(node.Modifiers(), node.IsTypeOnly, node.ExportClause, node.ModuleSpecifier, node.Attributes), node.AsNode(), f.AsNodeFactory().hooks)
+	switch node.Kind {
+	case KindExportDeclaration:
+		return cloneNode(f.AsNodeFactory().NewExportDeclaration(node.Modifiers(), node.IsTypeOnly, node.ExportClause, node.ModuleSpecifier, node.Attributes), node.AsNode(), f.AsNodeFactory().hooks)
+	case KindJSExportDeclaration:
+		return cloneNode(f.AsNodeFactory().NewJSExportDeclaration(node.Modifiers(), node.IsTypeOnly, node.ExportClause, node.ModuleSpecifier, node.Attributes), node.AsNode(), f.AsNodeFactory().hooks)
+	default:
+		panic("unexpected kind in ExportDeclaration.Clone: " + node.Kind.String())
+	}
 }
 
 func IsExportDeclaration(node *Node) bool {
 	return node.Kind == KindExportDeclaration
+}
+
+func IsJSExportDeclaration(node *Node) bool {
+	return node.Kind == KindJSExportDeclaration
 }
 
 // ──────────────────────────────────────────────────────────────────────
@@ -9545,6 +9622,10 @@ func (n *Node) AsJSDocThisTag() *JSDocThisTag {
 
 func (n *Node) AsJSDocImportTag() *JSDocImportTag {
 	return n.data.(*JSDocImportTag)
+}
+
+func (n *Node) AsJSDocExportTag() *JSDocExportTag {
+	return n.data.(*JSDocExportTag)
 }
 
 func (n *Node) AsJSDocCallbackTag() *JSDocCallbackTag {

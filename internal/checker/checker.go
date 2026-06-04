@@ -2356,7 +2356,7 @@ func (c *Checker) checkSourceElementWorker(node *ast.Node) {
 		c.checkImportDeclaration(node)
 	case ast.KindImportEqualsDeclaration:
 		c.checkImportEqualsDeclaration(node)
-	case ast.KindExportDeclaration:
+	case ast.KindExportDeclaration, ast.KindJSExportDeclaration:
 		c.checkExportDeclaration(node)
 	case ast.KindExportAssignment:
 		c.checkExportAssignment(node)
@@ -14942,7 +14942,7 @@ func getModuleSpecifierFromNode(node *ast.Node) *ast.Node {
 	switch node.Kind {
 	case ast.KindImportDeclaration, ast.KindJSImportDeclaration:
 		return node.ModuleSpecifier()
-	case ast.KindExportDeclaration:
+	case ast.KindExportDeclaration, ast.KindJSExportDeclaration:
 		return node.ModuleSpecifier()
 	}
 	panic("Unhandled case in getModuleSpecifierFromNode")
@@ -15072,7 +15072,9 @@ func (c *Checker) resolveExternalModule(location *ast.Node, moduleReference stri
 			}
 		}
 		if ancestor == nil {
-			ancestor = ast.FindAncestor(location, ast.IsExportDeclaration)
+			ancestor = ast.FindAncestor(location, func(n *ast.Node) bool {
+				return ast.IsExportDeclaration(n) || ast.IsJSExportDeclaration(n)
+			})
 			if ancestor != nil {
 				contextSpecifier = ancestor.ModuleSpecifier()
 			}

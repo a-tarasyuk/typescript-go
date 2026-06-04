@@ -420,13 +420,11 @@ func (l *LanguageService) getCompletionData(
 	forItemResolve bool,
 ) (completionData, error) {
 	inCheckedFile := isCheckedFile(file, l.GetProgram().Options())
-
 	currentToken := astnav.GetTokenAtPosition(file, position)
-
 	insideComment := isInComment(file, position, currentToken)
 
 	insideJSDocTagTypeExpression := false
-	insideJsDocImportTag := false
+	insideJsDocImportOrExportTag := false
 	isInSnippetScope := false
 	if insideComment != nil {
 		if hasDocComment(file, position) {
@@ -472,8 +470,8 @@ func (l *LanguageService) getCompletionData(
 			if tag.TagName().Pos() <= position && position <= tag.TagName().End() {
 				return &completionDataJSDocTagName{}, nil
 			}
-			if ast.IsJSDocImportTag(tag) {
-				insideJsDocImportTag = true
+			if ast.IsJSDocImportTag(tag) || ast.IsJSDocExportTag(tag) {
+				insideJsDocImportOrExportTag = true
 			} else {
 				if typeExpression := tryGetTypeExpressionFromTag(tag); typeExpression != nil {
 					currentToken = astnav.GetTokenAtPosition(file, position)
@@ -495,7 +493,7 @@ func (l *LanguageService) getCompletionData(
 			}
 		}
 
-		if !insideJSDocTagTypeExpression && !insideJsDocImportTag {
+		if !insideJSDocTagTypeExpression && !insideJsDocImportOrExportTag {
 			// Proceed if the current position is in JSDoc tag expression; otherwise it is a normal
 			// comment or the plain text part of a JSDoc comment, so no completion should be available
 			return nil, nil
@@ -504,7 +502,7 @@ func (l *LanguageService) getCompletionData(
 
 	// The decision to provide completion depends on the contextToken, which is determined through the previousToken.
 	// Note: 'previousToken' (and thus 'contextToken') can be undefined if we are the beginning of the file
-	isJSOnlyLocation := !insideJSDocTagTypeExpression && !insideJsDocImportTag && ast.IsSourceFileJS(file)
+	isJSOnlyLocation := !insideJSDocTagTypeExpression && !insideJsDocImportOrExportTag && ast.IsSourceFileJS(file)
 	contextToken, previousToken := getRelevantTokens(position, file)
 
 	// Find the node where completion is requested on.
@@ -670,7 +668,7 @@ func (l *LanguageService) getCompletionData(
 	symbolToOriginInfoMap := map[int]*symbolOriginInfo{}
 	symbolToSortTextMap := map[ast.SymbolId]SortText{}
 	var seenPropertySymbols collections.Set[ast.SymbolId]
-	isTypeOnlyLocation := insideJSDocTagTypeExpression || insideJsDocImportTag ||
+	isTypeOnlyLocation := insideJSDocTagTypeExpression || insideJsDocImportOrExportTag ||
 		importStatementCompletion != nil && location.Parent != nil && ast.IsTypeOnlyImportOrExportDeclaration(location.Parent) ||
 		!isContextTokenValueLocation(contextToken) &&
 			(isPossiblyTypeArgumentPosition(contextToken, file, typeChecker) ||
@@ -3372,10 +3370,7 @@ func getContextualKeywords(file *ast.SourceFile, contextToken *ast.Node, positio
 		parent := contextToken.Parent
 		tokenLine := scanner.GetECMALineOfPosition(file, contextToken.End())
 		currentLine := scanner.GetECMALineOfPosition(file, position)
-		if (ast.IsImportDeclaration(parent) ||
-			ast.IsExportDeclaration(parent) && parent.ModuleSpecifier() != nil) &&
-			contextToken == parent.ModuleSpecifier() &&
-			tokenLine == currentLine {
+		if (ast.IsImportDeclaration(parent) || (ast.IsExportDeclaration(parent) || ast.IsJSExportDeclaration(parent)) && parent.ModuleSpecifier() != nil) && contextToken == parent.ModuleSpecifier() && tokenLine == currentLine {
 			entries = append(entries, &lsproto.CompletionItem{
 				Label:    scanner.TokenToString(ast.KindAssertKeyword),
 				Kind:     new(lsproto.CompletionItemKindKeyword),
@@ -5106,7 +5101,7 @@ func (l *LanguageService) getImportStatementCompletionInfo(contextToken *ast.Nod
 			}
 		}
 
-	case ast.IsExportDeclaration(parent) && contextToken.Kind == ast.KindAsteriskToken,
+	case (ast.IsExportDeclaration(parent) || ast.IsJSExportDeclaration(parent)) && contextToken.Kind == ast.KindAsteriskToken,
 		ast.IsNamedExports(parent) && contextToken.Kind == ast.KindCloseBraceToken:
 		result.isKeywordOnlyCompletion = true
 		result.keywordCompletion = ast.KindFromKeyword

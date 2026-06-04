@@ -2173,7 +2173,7 @@ func (state *refState) getReferencesAtExportSpecifier(
 ) {
 	debug.Assert(!alwaysGetReferences || state.options.useAliasesForRename, "If alwaysGetReferences is true, then prefix/suffix text must be enabled")
 
-	exportDeclaration := exportSpecifier.Parent.Parent.AsExportDeclaration()
+	moduleSpecifier := exportSpecifier.Parent.Parent.ModuleSpecifier()
 	propertyName := exportSpecifier.PropertyName
 	name := exportSpecifier.Name()
 	localSymbol := getLocalSymbolForExportSpecifier(referenceLocation, referenceSymbol, exportSpecifier, state.checker)
@@ -2196,12 +2196,12 @@ func (state *refState) getReferencesAtExportSpecifier(
 	} else if referenceLocation == propertyName.AsNode() {
 		// For `export { foo as bar } from "baz"`, "`foo`" will be added from the singleReferences for import searches of the original export.
 		// For `export { foo as bar };`, where `foo` is a local, so add it now.
-		if exportDeclaration.ModuleSpecifier == nil {
+		if moduleSpecifier == nil {
 			addRef()
 		}
 
 		if addReferencesHere && state.options.use != referenceUseRename && state.markSeenReExportRHS(name) {
-			exportSymbol := exportSpecifier.AsNode().Symbol()
+			exportSymbol := state.checker.GetSymbolAtLocation(name)
 			debug.Assert(exportSymbol != nil, "exportSpecifier.Symbol() should not be nil")
 			state.addReference(name, exportSymbol, entryKindNode)
 		}
@@ -2218,7 +2218,7 @@ func (state *refState) getReferencesAtExportSpecifier(
 		if isDefaultExport {
 			exportKind = ExportKindDefault
 		}
-		exportSymbol := exportSpecifier.AsNode().Symbol()
+		exportSymbol := state.checker.GetSymbolAtLocation(name)
 		debug.Assert(exportSymbol != nil, "exportSpecifier.Symbol() should not be nil")
 		exportInfo := getExportInfo(exportSymbol, exportKind, state.checker)
 		if exportInfo != nil {
@@ -2227,7 +2227,7 @@ func (state *refState) getReferencesAtExportSpecifier(
 	}
 
 	// At `export { x } from "foo"`, also search for the imported symbol `"foo".x`.
-	if search.comingFrom != ImpExpKindExport && exportDeclaration.ModuleSpecifier != nil && propertyName == nil && !isForRenameWithPrefixAndSuffixText(state.options) {
+	if search.comingFrom != ImpExpKindExport && moduleSpecifier != nil && propertyName == nil && !isForRenameWithPrefixAndSuffixText(state.options) {
 		imported := state.checker.GetExportSpecifierLocalTargetSymbol(exportSpecifier.AsNode())
 		if imported != nil {
 			state.searchForImportedSymbol(imported)

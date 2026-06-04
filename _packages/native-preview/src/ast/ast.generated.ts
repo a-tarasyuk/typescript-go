@@ -367,7 +367,8 @@ export type JSDocNodeSyntaxKind =
     | SyntaxKind.JSDocPropertyTag
     | SyntaxKind.JSDocThrowsTag
     | SyntaxKind.JSDocSatisfiesTag
-    | SyntaxKind.JSDocImportTag;
+    | SyntaxKind.JSDocImportTag
+    | SyntaxKind.JSDocExportTag;
 export type ImportPhaseModifierSyntaxKind = SyntaxKind.TypeKeyword | SyntaxKind.DeferKeyword;
 export type PostfixUnaryOperator = SyntaxKind.PlusPlusToken | SyntaxKind.MinusMinusToken;
 export type PrefixUnaryOperator = SyntaxKind.PlusToken | SyntaxKind.MinusToken | SyntaxKind.TildeToken | SyntaxKind.ExclamationToken | SyntaxKind.PlusPlusToken | SyntaxKind.MinusMinusToken;
@@ -1237,6 +1238,12 @@ export interface JSDocImportTag extends JSDocTagBase {
     readonly kind: SyntaxKind.JSDocImportTag;
     readonly importClause?: ImportClause;
     readonly moduleSpecifier: Expression;
+    readonly attributes?: ImportAttributes;
+}
+export interface JSDocExportTag extends JSDocTagBase {
+    readonly kind: SyntaxKind.JSDocExportTag;
+    readonly exportClause?: NamedExportBindings;
+    readonly moduleSpecifier?: Expression;
     readonly attributes?: ImportAttributes;
 }
 export interface JSDocCallbackTag extends JSDocTagBase {

@@ -1,0 +1,24 @@
+//// [tests/cases/conformance/jsdoc/jsdocExportTag2.ts] ////
+
+=== /a.js ===
+class C {}
+>C : Symbol(C, Decl(a.js, 0, 0))
+
+/** @export { C, C as C2, C as default } */
+
+=== /b.js ===
+/** @import { C, C2 } from "./a" */
+/** @import D from "./a" */
+
+/** @type {C} */
+export const a = 1;
+>a : Symbol(a, Decl(b.js, 4, 12))
+
+/** @type {C2} */
+export const b = 1;
+>b : Symbol(b, Decl(b.js, 7, 12))
+
+/** @type {D} */
+export const c = 1;
+>c : Symbol(c, Decl(b.js, 10, 12))
+

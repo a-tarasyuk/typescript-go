@@ -1215,7 +1215,7 @@ func tryGetModuleSpecifierFromDeclarationWorker(node *ast.Node) *ast.Node {
 			return nil
 		}
 		return requireCall.Arguments()[0]
-	case ast.KindImportDeclaration, ast.KindExportDeclaration, ast.KindJSDocImportTag:
+	case ast.KindImportDeclaration, ast.KindExportDeclaration, ast.KindJSDocImportTag, ast.KindJSDocExportTag:
 		return node.ModuleSpecifier()
 	case ast.KindImportEqualsDeclaration:
 		ref := node.AsImportEqualsDeclaration().ModuleReference

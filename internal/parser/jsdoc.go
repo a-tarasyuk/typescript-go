@@ -522,6 +522,8 @@ func (p *Parser) parseTag(tags []*ast.Node, margin int) *ast.Node {
 		tag = p.parseThrowsTag(start, tagName, margin, indentText)
 	case "import":
 		tag = p.parseImportTag(start, tagName, margin, indentText)
+	case "export":
+		tag = p.parseExportTag(start, tagName, margin, indentText)
 	default:
 		tag = p.parseUnknownTag(start, tagName, margin, indentText)
 	}
@@ -946,10 +948,23 @@ func (p *Parser) parseImportTag(start int, tagName *ast.IdentifierNode, margin i
 
 	importClause := p.tryParseImportClause(identifier, afterImportTagPos, ast.KindTypeKeyword, true /*skipJSDocLeadingAsterisks*/)
 	moduleSpecifier := p.parseModuleSpecifier()
-	attributes := p.tryParseImportAttributes()
+	attributes := p.tryParseImportAttributes(false /*requireNoPrecedingLineBreak*/)
 
 	comments := p.parseTrailingTagComments(start, p.nodePos(), margin, indentText)
 	return p.finishNode(p.factory.NewJSDocImportTag(tagName, importClause, moduleSpecifier, attributes, comments), start)
+}
+
+func (p *Parser) parseExportTag(start int, tagName *ast.IdentifierNode, margin int, indentText string) *ast.Node {
+	p.parseOptional(ast.KindTypeKeyword)
+
+	exportClause, moduleSpecifier := p.parseExportClauseAndModuleSpecifier(true /*skipJSDocLeadingAsterisks*/)
+	var attributes *ast.ImportAttributesNode
+	if moduleSpecifier != nil {
+		attributes = p.tryParseImportAttributes(true /*requireNoPrecedingLineBreak*/)
+	}
+
+	comments := p.parseTrailingTagComments(start, p.nodePos(), margin, indentText)
+	return p.finishNode(p.factory.NewJSDocExportTag(tagName, exportClause, moduleSpecifier, attributes, comments), start)
 }
 
 func (p *Parser) parseExpressionWithTypeArgumentsForAugments() *ast.Node {

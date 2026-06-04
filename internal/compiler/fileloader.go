@@ -695,7 +695,7 @@ func getDefaultResolutionModeForFile(fileName string, meta ast.SourceFileMetaDat
 }
 
 func getModeForUsageLocation(fileName string, meta ast.SourceFileMetaData, usage *ast.StringLiteralLike, options *core.CompilerOptions) core.ResolutionMode {
-	if ast.IsImportDeclaration(usage.Parent) || usage.Parent.Kind == ast.KindJSImportDeclaration || ast.IsExportDeclaration(usage.Parent) || ast.IsJSDocImportTag(usage.Parent) {
+	if ast.IsImportDeclaration(usage.Parent) || usage.Parent.Kind == ast.KindJSImportDeclaration || ast.IsExportDeclaration(usage.Parent) || usage.Parent.Kind == ast.KindJSExportDeclaration || ast.IsJSDocImportTag(usage.Parent) || ast.IsJSDocExportTag(usage.Parent) {
 		isTypeOnly := ast.IsExclusivelyTypeOnlyImportOrExport(usage.Parent)
 		if isTypeOnly {
 			var override core.ResolutionMode
@@ -703,10 +703,12 @@ func getModeForUsageLocation(fileName string, meta ast.SourceFileMetaData, usage
 			switch usage.Parent.Kind {
 			case ast.KindImportDeclaration, ast.KindJSImportDeclaration:
 				override, ok = usage.Parent.AsImportDeclaration().Attributes.GetResolutionModeOverride()
-			case ast.KindExportDeclaration:
+			case ast.KindExportDeclaration, ast.KindJSExportDeclaration:
 				override, ok = usage.Parent.AsExportDeclaration().Attributes.GetResolutionModeOverride()
 			case ast.KindJSDocImportTag:
 				override, ok = usage.Parent.AsJSDocImportTag().Attributes.GetResolutionModeOverride()
+			case ast.KindJSDocExportTag:
+				override, ok = usage.Parent.AsJSDocExportTag().Attributes.GetResolutionModeOverride()
 			}
 			if ok {
 				return override

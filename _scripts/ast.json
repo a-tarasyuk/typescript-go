@@ -430,6 +430,7 @@
             "JSDocThrowsTag",
             "JSDocSatisfiesTag",
             "JSDocImportTag",
+            "JSDocExportTag",
             {
                 "comment": "Synthesized list"
             },
@@ -439,6 +440,7 @@
             },
             "JSTypeAliasDeclaration",
             "JSImportDeclaration",
+            "JSExportDeclaration",
             {
                 "comment": "Transformation nodes"
             },
@@ -554,7 +556,7 @@
             },
             {
                 "name": "LastJSDocNode",
-                "value": "JSDocImportTag"
+                "value": "JSDocExportTag"
             },
             {
                 "name": "FirstJSDocTagNode",
@@ -562,7 +564,7 @@
             },
             {
                 "name": "LastJSDocTagNode",
-                "value": "JSDocImportTag"
+                "value": "JSDocExportTag"
             },
             {
                 "name": "FirstContextualKeyword",
@@ -4650,6 +4652,36 @@
                     }
                 ]
             },
+            "JSDocExportTag": {
+                "extends": [
+                    "JSDocTagBase"
+                ],
+                "members": [
+                    {
+                        "name": "TagName",
+                        "inherited": true
+                    },
+                    {
+                        "name": "ExportClause",
+                        "type": "NamedExportBindings",
+                        "optional": true
+                    },
+                    {
+                        "name": "ModuleSpecifier",
+                        "type": "Expression",
+                        "optional": true
+                    },
+                    {
+                        "name": "Attributes",
+                        "type": "ImportAttributes",
+                        "optional": true
+                    },
+                    {
+                        "name": "Comment",
+                        "inherited": true
+                    }
+                ]
+            },
             "JSDocCallbackTag": {
                 "extends": [
                     "JSDocTagBase"
@@ -4836,6 +4868,10 @@
                 ]
             },
             "ExportDeclaration": {
+                "kind": [
+                    "ExportDeclaration",
+                    "JSExportDeclaration"
+                ],
                 "extends": [
                     "DeclarationBase",
                     "StatementBase",
