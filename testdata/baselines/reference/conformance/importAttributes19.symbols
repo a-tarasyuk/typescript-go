@@ -1,0 +1,35 @@
+//// [tests/cases/conformance/importAttributes/importAttributes19.ts] ////
+
+=== a.ts ===
+declare module "a:b" with { "resolution-mode": "import" } {
+>"a:b" : Symbol("a:b", Decl(a.ts, 0, 0))
+
+    export interface A {
+>A : Symbol(A, Decl(a.ts, 0, 59))
+
+        kind: "a";
+>kind : Symbol(A.kind, Decl(a.ts, 1, 24))
+    }
+}
+
+=== b.js ===
+/** @import { A } from "a:b" with { "resolution-mode": "import" } */
+
+/** @type {A} */
+const a = { kind: "a" };
+>a : Symbol(a, Decl(b.js, 3, 5))
+>kind : Symbol(kind, Decl(b.js, 3, 11))
+
+=== c.ts ===
+type B = import("a:b", { with: { "resolution-mode": "import" } }).A;
+>B : Symbol(B, Decl(c.ts, 0, 0))
+>A : Symbol(A, Decl(a.ts, 0, 59))
+
+declare const b: B;
+>b : Symbol(b, Decl(c.ts, 1, 13))
+>B : Symbol(B, Decl(c.ts, 0, 0))
+
+b satisfies { kind: "a" };
+>b : Symbol(b, Decl(c.ts, 1, 13))
+>kind : Symbol(kind, Decl(c.ts, 2, 13))
+

@@ -1,0 +1,158 @@
+//// [tests/cases/conformance/importAttributes/importAttributes21.ts] ////
+
+=== a.ts ===
+declare module "a:b" with { type: "css" } {
+>"a:b" : Symbol("a:b", Decl(a.ts, 0, 0))
+
+    export const a: "a";
+>a : Symbol(a, Decl(a.ts, 1, 16))
+}
+
+declare module "a:b" with { type: "json" } {
+>"a:b" : Symbol("a:b", Decl(a.ts, 2, 1))
+
+    export const b: "b";
+>b : Symbol(b, Decl(a.ts, 5, 16))
+}
+
+declare module "a:b" {
+>"a:b" : Symbol("a:b", Decl(a.ts, 6, 1))
+
+    export const d: "d";
+>d : Symbol(d, Decl(a.ts, 9, 16))
+}
+
+declare module "a:c" with {} {
+>"a:c" : Symbol("a:c", Decl(a.ts, 10, 1))
+
+    export const g: "g";
+>g : Symbol(g, Decl(a.ts, 13, 16))
+}
+
+declare module "a:c" {
+>"a:c" : Symbol("a:c", Decl(a.ts, 14, 1))
+
+    export const h: "h";
+>h : Symbol(h, Decl(a.ts, 17, 16))
+}
+
+=== b.ts ===
+export {};
+
+declare module "a:b" with { type: "css" } {
+>"a:b" : Symbol("a:b", Decl(b.ts, 0, 10), Decl(a.ts, 0, 0), Decl(b.ts, 4, 1))
+
+    export const c: "c";
+>c : Symbol(c, Decl(b.ts, 3, 16))
+}
+
+declare module "a:b" with { type: "css" } {
+>"a:b" : Symbol("a:b", Decl(b.ts, 0, 10), Decl(a.ts, 0, 0), Decl(b.ts, 4, 1))
+
+    export const e: "e";
+>e : Symbol(e, Decl(b.ts, 7, 16))
+}
+
+declare module "a:b" with { type: "json" } {
+>"a:b" : Symbol("a:b", Decl(b.ts, 8, 1), Decl(a.ts, 2, 1))
+
+    export const f: "f";
+>f : Symbol(f, Decl(b.ts, 11, 16))
+}
+
+=== c.ts ===
+import * as a from "a:b" with { type: "css" };
+>a : Symbol(a, Decl(c.ts, 0, 6))
+
+import * as b from "a:b" with { type: "json" };
+>b : Symbol(b, Decl(c.ts, 1, 6))
+
+import * as c from "a:b";
+>c : Symbol(c, Decl(c.ts, 2, 6))
+
+import * as d from "a:c" with {};
+>d : Symbol(d, Decl(c.ts, 3, 6))
+
+import * as e from "a:c";
+>e : Symbol(e, Decl(c.ts, 4, 6))
+
+a.a satisfies "a";
+>a.a : Symbol(a.a, Decl(a.ts, 1, 16))
+>a : Symbol(a, Decl(c.ts, 0, 6))
+>a : Symbol(a.a, Decl(a.ts, 1, 16))
+
+a.c satisfies "c";
+>a.c : Symbol(a.c, Decl(b.ts, 3, 16))
+>a : Symbol(a, Decl(c.ts, 0, 6))
+>c : Symbol(a.c, Decl(b.ts, 3, 16))
+
+a.e satisfies "e";
+>a.e : Symbol(a.e, Decl(b.ts, 7, 16))
+>a : Symbol(a, Decl(c.ts, 0, 6))
+>e : Symbol(a.e, Decl(b.ts, 7, 16))
+
+b.b satisfies "b";
+>b.b : Symbol(b.b, Decl(a.ts, 5, 16))
+>b : Symbol(b, Decl(c.ts, 1, 6))
+>b : Symbol(b.b, Decl(a.ts, 5, 16))
+
+b.f satisfies "f";
+>b.f : Symbol(b.f, Decl(b.ts, 11, 16))
+>b : Symbol(b, Decl(c.ts, 1, 6))
+>f : Symbol(b.f, Decl(b.ts, 11, 16))
+
+c.d satisfies "d";
+>c.d : Symbol(c.d, Decl(a.ts, 9, 16))
+>c : Symbol(c, Decl(c.ts, 2, 6))
+>d : Symbol(c.d, Decl(a.ts, 9, 16))
+
+d.g satisfies "g";
+>d.g : Symbol(d.g, Decl(a.ts, 13, 16))
+>d : Symbol(d, Decl(c.ts, 3, 6))
+>g : Symbol(d.g, Decl(a.ts, 13, 16))
+
+e.h satisfies "h";
+>e.h : Symbol(e.h, Decl(a.ts, 17, 16))
+>e : Symbol(e, Decl(c.ts, 4, 6))
+>h : Symbol(e.h, Decl(a.ts, 17, 16))
+
+// @ts-expect-error
+a.b;
+>a : Symbol(a, Decl(c.ts, 0, 6))
+
+// @ts-expect-error
+b.a;
+>b : Symbol(b, Decl(c.ts, 1, 6))
+
+// @ts-expect-error
+b.c;
+>b : Symbol(b, Decl(c.ts, 1, 6))
+
+// @ts-expect-error
+a.f;
+>a : Symbol(a, Decl(c.ts, 0, 6))
+
+// @ts-expect-error
+b.e;
+>b : Symbol(b, Decl(c.ts, 1, 6))
+
+// @ts-expect-error
+c.a;
+>c : Symbol(c, Decl(c.ts, 2, 6))
+
+// @ts-expect-error
+c.b;
+>c : Symbol(c, Decl(c.ts, 2, 6))
+
+// @ts-expect-error
+c.c;
+>c : Symbol(c, Decl(c.ts, 2, 6))
+
+// @ts-expect-error
+d.h;
+>d : Symbol(d, Decl(c.ts, 3, 6))
+
+// @ts-expect-error
+e.g;
+>e : Symbol(e, Decl(c.ts, 4, 6))
+

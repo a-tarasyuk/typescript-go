@@ -1,0 +1,63 @@
+//// [tests/cases/conformance/importAttributes/importAttributes18.ts] ////
+
+=== a.ts ===
+declare module "*.css" with { type: "css" } {
+>"*.css" : Symbol("*.css", Decl(a.ts, 0, 0), Decl(b.ts, 0, 0))
+
+    const a: { kind: "a" };
+>a : Symbol(a, Decl(a.ts, 1, 9))
+>kind : Symbol(kind, Decl(a.ts, 1, 14))
+
+    export default a;
+>a : Symbol(a, Decl(a.ts, 1, 9))
+}
+
+declare module "a:b" with { type: "json", mode: "raw" } {
+>"a:b" : Symbol("a:b", Decl(a.ts, 3, 1), Decl(b.ts, 2, 1))
+
+    const b: { kind: "b" };
+>b : Symbol(b, Decl(a.ts, 6, 9))
+>kind : Symbol(kind, Decl(a.ts, 6, 14))
+
+    export default b;
+>b : Symbol(b, Decl(a.ts, 6, 9))
+}
+
+=== b.ts ===
+declare module "*.css" with { type: "css" } {
+>"*.css" : Symbol("*.css", Decl(a.ts, 0, 0), Decl(b.ts, 0, 0))
+
+    export const c: true;
+>c : Symbol(c, Decl(b.ts, 1, 16))
+}
+
+declare module "a:b" with { mode: "raw", type: "json" } {
+>"a:b" : Symbol("a:b", Decl(a.ts, 3, 1), Decl(b.ts, 2, 1))
+
+    export const d: true;
+>d : Symbol(d, Decl(b.ts, 5, 16))
+}
+
+=== c.ts ===
+import a, { c } from "./a.css" with { type: "css" };
+>a : Symbol(a, Decl(c.ts, 0, 6))
+>c : Symbol(c, Decl(c.ts, 0, 11))
+
+import b, { d } from "a:b" with { type: "json", mode: "raw" };
+>b : Symbol(b, Decl(c.ts, 1, 6))
+>d : Symbol(d, Decl(c.ts, 1, 11))
+
+a satisfies { kind: "a" };
+>a : Symbol(a, Decl(c.ts, 0, 6))
+>kind : Symbol(kind, Decl(c.ts, 3, 13))
+
+b satisfies { kind: "b" };
+>b : Symbol(b, Decl(c.ts, 1, 6))
+>kind : Symbol(kind, Decl(c.ts, 4, 13))
+
+c satisfies true;
+>c : Symbol(c, Decl(c.ts, 0, 11))
+
+d satisfies true;
+>d : Symbol(d, Decl(c.ts, 1, 11))
+

@@ -258,6 +258,7 @@ func TestDeepCloneNodeSanityCheck(t *testing.T) {
 		{title: "ModuleDeclaration#6", input: `namespace a.b{}`},
 		{title: "ModuleDeclaration#7", input: `global;`},
 		{title: "ModuleDeclaration#8", input: `global{}`},
+		{title: "ModuleDeclaration#9", input: `declare module "*.css" with { type: "css" } {}`},
 		{title: "ImportEqualsDeclaration#1", input: `import a = b`},
 		{title: "ImportEqualsDeclaration#2", input: `import a = b.c`},
 		{title: "ImportEqualsDeclaration#3", input: `import a = require("b")`},

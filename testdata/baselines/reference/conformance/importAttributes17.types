@@ -1,0 +1,21 @@
+//// [tests/cases/conformance/importAttributes/importAttributes17.ts] ////
+
+=== a.ts ===
+declare module "*.css" with { type: "css" } {
+>"*.css" : typeof import("*.css")
+>type : error
+
+    const a: { kind: "a" };
+>a : { kind: "a"; }
+>kind : "a"
+
+    export default a;
+>a : { kind: "a"; }
+}
+
+=== b.ts ===
+export { default as a } from "./a.css" with { type: "css" };
+>default : { kind: "a"; }
+>a : { kind: "a"; }
+>type : error
+

@@ -1,0 +1,64 @@
+a.ts(16,35): error TS2858: Import attribute values must be string literal expressions.
+a.ts(17,35): error TS2858: Import attribute values must be string literal expressions.
+a.ts(18,22): error TS2880: Import assertions have been replaced by import attributes. Use 'with' instead of 'assert'.
+b.ts(1,15): error TS2307: Cannot find module 'a.css' or its corresponding type declarations.
+b.ts(2,15): error TS2307: Cannot find module 'b.css' or its corresponding type declarations.
+b.ts(3,15): error TS2307: Cannot find module 'a.txt' or its corresponding type declarations.
+b.ts(4,15): error TS2307: Cannot find module 'a.wasm' or its corresponding type declarations.
+b.ts(5,15): error TS2307: Cannot find module 'b.wasm' or its corresponding type declarations.
+b.ts(6,23): error TS2880: Import assertions have been replaced by import attributes. Use 'with' instead of 'assert'.
+
+
+==== a.ts (3 errors) ====
+    declare module "*.css" with { type: "css" } {
+        const a: never;
+        export default a;
+    }
+    
+    declare module "*.txt" {
+        const b: never;
+        export default b;
+    }
+    
+    declare module "*.wasm" with { type: "module", version: "1" } {
+        const c: never;
+        export default c;
+    }
+    
+    declare module "a:b" with { type: 1 } {}
+                                      ~
+!!! error TS2858: Import attribute values must be string literal expressions.
+    declare module "a:c" with { type: `css` } {}
+                                      ~~~~~
+!!! error TS2858: Import attribute values must be string literal expressions.
+    declare module "a:d" assert { type: "css" } {}
+                         ~~~~~~
+!!! error TS2880: Import assertions have been replaced by import attributes. Use 'with' instead of 'assert'.
+    
+==== b.ts (6 errors) ====
+    import a from "a.css" with { type: "style" };
+                  ~~~~~~~
+!!! error TS2307: Cannot find module 'a.css' or its corresponding type declarations.
+    import b from "b.css";
+                  ~~~~~~~
+!!! error TS2307: Cannot find module 'b.css' or its corresponding type declarations.
+    import c from "a.txt" with { type: "text" };
+                  ~~~~~~~
+!!! error TS2307: Cannot find module 'a.txt' or its corresponding type declarations.
+    import d from "a.wasm" with { type: "module" };
+                  ~~~~~~~~
+!!! error TS2307: Cannot find module 'a.wasm' or its corresponding type declarations.
+    import e from "b.wasm" with { type: "module", version: "1", extra: "value" };
+                  ~~~~~~~~
+!!! error TS2307: Cannot find module 'b.wasm' or its corresponding type declarations.
+    import f from "c.css" assert { type: "css" };
+                          ~~~~~~
+!!! error TS2880: Import assertions have been replaced by import attributes. Use 'with' instead of 'assert'.
+    
+    a;
+    b;
+    c;
+    d;
+    e;
+    f;
+    

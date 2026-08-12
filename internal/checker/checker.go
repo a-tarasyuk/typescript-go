@@ -767,8 +767,10 @@ type Checker struct {
 	cachedArgumentsReferenced                   map[*ast.Node]bool
 	enumNumberIndexInfo                         *IndexInfo
 	anyBaseTypeIndexInfo                        *IndexInfo
-	patternAmbientModules                       []*ast.PatternAmbientModule
-	patternAmbientModuleAugmentations           ast.SymbolTable
+	ambientModuleEntries                        []*ast.AmbientModuleEntry
+	ambientModuleEntriesByName                  map[string][]*ast.AmbientModuleEntry
+	ambientModulePatterns                       []*ast.AmbientModuleEntry
+	ambientModuleEntryAugmentations             map[*ast.Symbol]ast.SymbolTable
 	globalObjectType                            *Type
 	globalFunctionType                          *Type
 	globalCallableFunctionType                  *Type
@@ -1320,7 +1322,7 @@ func (c *Checker) initializeChecker() {
 				}
 			}
 		}
-		c.patternAmbientModules = append(c.patternAmbientModules, file.PatternAmbientModules...)
+		c.ambientModuleEntries = append(c.ambientModuleEntries, file.AmbientModuleEntries...)
 		augmentations = append(augmentations, file.ModuleAugmentations)
 		if file.Symbol != nil {
 			// Merge in UMD exports with first-in-wins semantics (see #9771)
@@ -1377,6 +1379,7 @@ func (c *Checker) initializeChecker() {
 	for _, symbol := range ambientModuleSymbols {
 		c.mergeGlobalSymbol(symbol)
 	}
+	c.ambientModuleEntries = c.mergeAmbientModules(c.ambientModuleEntries)
 	// merge _nonglobal_ module augmentations.
 	// this needs to be done after global symbol table is initialized to make sure that all ambient modules are indexed
 	for _, list := range augmentations {
@@ -1424,17 +1427,24 @@ func (c *Checker) mergeModuleAugmentation(moduleName *ast.Node) {
 		// obtain item referenced by 'export='
 		mainModule = c.resolveExternalModuleSymbol(mainModule, false /*dontResolveAlias*/)
 		if mainModule.Flags&ast.SymbolFlagsNamespace != 0 {
-			// If we're merging an augmentation to a pattern ambient module, we want to
-			// perform the merge unidirectionally from the augmentation ('a.foo') to
-			// the pattern ('*.foo'), so that 'getMergedSymbol()' on a.foo gives you
-			// all the exports both from the pattern and from the augmentation, but
-			// 'getMergedSymbol()' on *.foo only gives you exports from *.foo.
-			if core.Some(c.patternAmbientModules, func(module *ast.PatternAmbientModule) bool {
+			if core.Some(c.ambientModuleEntries, func(module *ast.AmbientModuleEntry) bool {
 				return mainModule == module.Symbol
 			}) {
-				merged := c.mergeSymbol(moduleAugmentation.Symbol, mainModule, true /*unidirectional*/)
-				// moduleName will be a StringLiteral since this is not `declare global`.
-				ast.GetSymbolTable(&c.patternAmbientModuleAugmentations)[moduleName.Text()] = merged
+				if c.ambientModuleEntryAugmentations == nil {
+					c.ambientModuleEntryAugmentations = make(map[*ast.Symbol]ast.SymbolTable)
+				}
+				augmentations := c.ambientModuleEntryAugmentations[mainModule]
+				if augmentations == nil {
+					augmentations = make(ast.SymbolTable)
+					c.ambientModuleEntryAugmentations[mainModule] = augmentations
+				}
+				augmentation := augmentations[moduleName.Text()]
+				if augmentation == nil {
+					augmentation = c.mergeSymbol(moduleAugmentation.Symbol, mainModule, true /*unidirectional*/)
+				} else {
+					augmentation = c.mergeSymbol(augmentation, moduleAugmentation.Symbol, false /*unidirectional*/)
+				}
+				augmentations[moduleName.Text()] = augmentation
 			} else {
 				if mainModule.Exports[ast.InternalSymbolNameExportStar] != nil && len(moduleAugmentation.Symbol.Exports) != 0 {
 					// We may need to merge the module augmentation's exports into the target symbols of the resolved exports
@@ -5137,6 +5147,10 @@ func (c *Checker) checkEnumMember(node *ast.Node) {
 }
 
 func (c *Checker) checkModuleDeclaration(node *ast.Node) {
+	attributes := node.AsModuleDeclaration().Attributes
+	if attributes != nil {
+		c.checkImportAttributeValues(attributes)
+	}
 	if body := node.Body(); body != nil {
 		c.checkSourceElement(body)
 		if !ast.IsGlobalScopeAugmentation(node) {
@@ -5369,17 +5383,23 @@ func (c *Checker) checkExternalImportOrExportDeclaration(node *ast.Node) bool {
 	if !ast.IsImportEqualsDeclaration(node) {
 		attributes := ast.GetImportAttributes(node)
 		if attributes != nil {
-			hasError := false
-			for _, attr := range attributes.AsImportAttributes().Attributes.Nodes {
-				if !ast.IsStringLiteral(attr.AsImportAttribute().Value) {
-					hasError = true
-					c.error(attr.AsImportAttribute().Value, diagnostics.Import_attribute_values_must_be_string_literal_expressions)
-				}
-			}
-			return !hasError
+			return c.checkImportAttributeValues(attributes)
 		}
 	}
 	return true
+}
+
+func (c *Checker) checkImportAttributeValues(attributes *ast.Node) bool {
+	valid := true
+	for _, attribute := range attributes.AsImportAttributes().Attributes.Nodes {
+		value := attribute.AsImportAttribute().Value
+		if ast.IsStringLiteral(value) {
+			continue
+		}
+		valid = false
+		c.error(value, diagnostics.Import_attribute_values_must_be_string_literal_expressions)
+	}
+	return valid
 }
 
 func (c *Checker) checkImportBinding(node *ast.Node) {
@@ -15131,7 +15151,16 @@ func (c *Checker) getCannotResolveModuleNameErrorForSpecificModule(moduleName *a
 
 func (c *Checker) resolveExternalModuleNameWorker(location *ast.Node, moduleReferenceExpression *ast.Node, moduleNotFoundError *diagnostics.Message, ignoreErrors bool, isForAugmentation bool) *ast.Symbol {
 	if ast.IsStringLiteralLike(moduleReferenceExpression) {
-		return c.resolveExternalModule(location, moduleReferenceExpression.Text(), moduleNotFoundError, core.IfElse(!ignoreErrors, moduleReferenceExpression, nil), isForAugmentation)
+		var importAttributes *ast.Node
+		if ast.IsModuleDeclaration(moduleReferenceExpression.Parent) {
+			importAttributes = moduleReferenceExpression.Parent.AsModuleDeclaration().Attributes
+		} else {
+			declaration := ast.TryGetImportFromModuleSpecifier(moduleReferenceExpression)
+			if declaration != nil {
+				importAttributes = ast.GetImportAttributes(declaration)
+			}
+		}
+		return c.resolveExternalModule(location, moduleReferenceExpression.Text(), importAttributes, moduleNotFoundError, core.IfElse(!ignoreErrors, moduleReferenceExpression, nil), isForAugmentation)
 	}
 	return nil
 }
@@ -15156,14 +15185,27 @@ func (c *Checker) getExternalModuleFileFromDeclaration(declaration *ast.Node) *a
 	return decl.AsSourceFile()
 }
 
-func (c *Checker) resolveExternalModule(location *ast.Node, moduleReference string, moduleNotFoundError *diagnostics.Message, errorNode *ast.Node, isForAugmentation bool) *ast.Symbol {
+func (c *Checker) resolveExternalModule(location *ast.Node, moduleReference string, importAttributes *ast.Node, moduleNotFoundError *diagnostics.Message, errorNode *ast.Node, isForAugmentation bool) *ast.Symbol {
 	if errorNode != nil && strings.HasPrefix(moduleReference, "@types/") {
 		withoutAtTypePrefix := moduleReference[len("@types/"):]
 		c.error(errorNode, diagnostics.Cannot_import_type_declaration_files_Consider_importing_0_instead_of_1, withoutAtTypePrefix, moduleReference)
 	}
+	modules := c.ambientModuleEntriesByName[moduleReference]
+	for _, module := range modules {
+		if importAttributesMatch(module.Attributes, importAttributes) {
+			augmentations := c.ambientModuleEntryAugmentations[c.getMergedSymbol(module.Symbol)]
+			augmentation := augmentations[moduleReference]
+			if augmentation != nil {
+				return c.getMergedSymbol(augmentation)
+			}
+			return c.getMergedSymbol(module.Symbol)
+		}
+	}
 	ambientModule := c.tryFindAmbientModule(moduleReference, true /*withAugmentations*/)
 	if ambientModule != nil {
-		return ambientModule
+		if importAttributes == nil {
+			return ambientModule
+		}
 	}
 
 	importingSourceFile := ast.GetSourceFileOfNode(location)
@@ -15371,15 +15413,22 @@ func (c *Checker) resolveExternalModule(location *ast.Node, moduleReference stri
 		return nil
 	}
 
-	if len(c.patternAmbientModules) != 0 {
-		pattern := core.FindBestPatternMatch(c.patternAmbientModules, func(v *ast.PatternAmbientModule) core.Pattern { return v.Pattern }, moduleReference)
-		if pattern != nil {
-			augmentation := c.patternAmbientModuleAugmentations[moduleReference]
-			if augmentation != nil {
-				return c.getMergedSymbol(augmentation)
+	var module *ast.AmbientModuleEntry
+	for _, m := range c.ambientModulePatterns {
+		if module == nil || m.Pattern.StarIndex > module.Pattern.StarIndex {
+			if m.Pattern.Matches(moduleReference) && importAttributesMatch(m.Attributes, importAttributes) {
+				module = m
 			}
-			return c.getMergedSymbol(pattern.Symbol)
 		}
+	}
+
+	if module != nil {
+		augmentations := c.ambientModuleEntryAugmentations[c.getMergedSymbol(module.Symbol)]
+		augmentation := augmentations[moduleReference]
+		if augmentation != nil {
+			return c.getMergedSymbol(augmentation)
+		}
+		return c.getMergedSymbol(module.Symbol)
 	}
 
 	if errorNode == nil {
@@ -15540,6 +15589,99 @@ func (c *Checker) createModeMismatchDetails(sourceFile *ast.SourceFile, errorNod
 	return result
 }
 
+func (c *Checker) mergeAmbientModules(modules []*ast.AmbientModuleEntry) []*ast.AmbientModuleEntry {
+	result := make([]*ast.AmbientModuleEntry, 0, len(modules))
+	modulesByPattern := make(map[core.Pattern][]*ast.AmbientModuleEntry)
+
+modulesLoop:
+	for _, module := range modules {
+		for _, existing := range modulesByPattern[module.Pattern] {
+			if importAttributesMatch(existing.Attributes, module.Attributes) {
+				existing.Symbol = c.mergeSymbol(existing.Symbol, module.Symbol, false /*unidirectional*/)
+				continue modulesLoop
+			}
+		}
+		ambientModule := &ast.AmbientModuleEntry{
+			Pattern:    module.Pattern,
+			Symbol:     module.Symbol,
+			Attributes: module.Attributes,
+		}
+		modulesByPattern[module.Pattern] = append(modulesByPattern[module.Pattern], ambientModule)
+		result = append(result, ambientModule)
+		if module.Pattern.StarIndex == -1 {
+			if c.ambientModuleEntriesByName == nil {
+				c.ambientModuleEntriesByName = make(map[string][]*ast.AmbientModuleEntry)
+			}
+			c.ambientModuleEntriesByName[module.Pattern.Text] = append(c.ambientModuleEntriesByName[module.Pattern.Text], ambientModule)
+			continue
+		}
+		c.ambientModulePatterns = append(c.ambientModulePatterns, ambientModule)
+	}
+	return result
+}
+
+func importAttributesMatch(source *ast.Node, target *ast.Node) bool {
+	if source == nil || target == nil {
+		return source == target
+	}
+
+	sourceAttributes := source.AsImportAttributes().Attributes.Nodes
+	var targetAttributes []*ast.Node
+	switch target.Kind {
+	case ast.KindImportAttributes:
+		targetAttributes = target.AsImportAttributes().Attributes.Nodes
+	case ast.KindObjectLiteralExpression:
+		targetAttributes = target.AsObjectLiteralExpression().Properties.Nodes
+	default:
+		return false
+	}
+
+	if len(sourceAttributes) == len(targetAttributes) {
+		seen := make(map[string]string, len(targetAttributes))
+		for _, attribute := range targetAttributes {
+			var value *ast.Node
+			switch attribute.Kind {
+			case ast.KindImportAttribute:
+				value = attribute.AsImportAttribute().Value
+			case ast.KindPropertyAssignment:
+				value = ast.SkipParentheses(attribute.AsPropertyAssignment().Initializer)
+			}
+
+			name := attribute.Name()
+			if name == nil || value == nil {
+				return false
+			}
+
+			if ast.IsIdentifier(name) || ast.IsStringLiteral(name) {
+				if ast.IsStringLiteral(value) {
+					seen[name.Text()] = value.Text()
+					continue
+				}
+			}
+			return false
+		}
+
+		for _, attribute := range sourceAttributes {
+			name := attribute.Name()
+			value := attribute.AsImportAttribute().Value
+			if name == nil || value == nil {
+				return false
+			}
+
+			if ast.IsStringLiteral(value) {
+				targetValue, exists := seen[name.Text()]
+				if exists && targetValue == value.Text() {
+					continue
+				}
+			}
+			return false
+		}
+
+		return true
+	}
+	return false
+}
+
 func (c *Checker) tryFindAmbientModule(moduleName string, withAugmentations bool) *ast.Symbol {
 	if tspath.IsExternalModuleNameRelative(moduleName) {
 		return nil
@@ -15554,10 +15696,13 @@ func (c *Checker) tryFindAmbientModule(moduleName string, withAugmentations bool
 
 func (c *Checker) GetAmbientModules() []*ast.Symbol {
 	c.ambientModulesOnce.Do(func() {
-		for sym, global := range c.globals {
-			if strings.HasPrefix(sym, "\"") && strings.HasSuffix(sym, "\"") {
-				c.ambientModules = append(c.ambientModules, global)
+		for name, symbol := range c.globals {
+			if strings.HasPrefix(name, "\"") && strings.HasSuffix(name, "\"") {
+				c.ambientModules = append(c.ambientModules, symbol)
 			}
+		}
+		for _, module := range c.ambientModuleEntries {
+			c.ambientModules = append(c.ambientModules, c.getMergedSymbol(module.Symbol))
 		}
 	})
 	return c.ambientModules
@@ -28685,7 +28830,7 @@ func (c *Checker) resolveHelpersModule(file *ast.SourceFile, errorNode *ast.Node
 	links := c.sourceFileLinks.Get(file)
 	if links.externalHelpersModule == nil {
 		location := c.program.GetImportHelpersImportSpecifier(file.Path())
-		helpersModule := c.resolveExternalModule(location, externalHelpersModuleNameText, diagnostics.This_syntax_requires_an_imported_helper_but_module_0_cannot_be_found, errorNode, false /*isForAugmentation*/)
+		helpersModule := c.resolveExternalModule(location, externalHelpersModuleNameText, nil /*importAttributes*/, diagnostics.This_syntax_requires_an_imported_helper_but_module_0_cannot_be_found, errorNode, false /*isForAugmentation*/)
 		if helpersModule == nil {
 			helpersModule = c.unknownSymbol
 		}

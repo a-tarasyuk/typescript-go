@@ -1,0 +1,143 @@
+//// [tests/cases/conformance/importAttributes/importAttributes15.ts] ////
+
+=== a.ts ===
+declare module "*" with { type: "css" } {
+>"*" : typeof import("*")
+>type : error
+
+    const a: { kind: "a" };
+>a : { kind: "a"; }
+>kind : "a"
+
+    export default a;
+>a : { kind: "a"; }
+}
+
+declare module "*" with { type: "css" } {
+>"*" : typeof import("*")
+>type : error
+
+    export const b: true;
+>b : true
+>true : true
+}
+
+declare module "*" with { type: "json" } {
+>"*" : typeof import("*")
+>type : error
+
+    const c: { kind: "c" };
+>c : { kind: "c"; }
+>kind : "c"
+
+    export default c;
+>c : { kind: "c"; }
+}
+
+declare module "*" {
+>"*" : typeof import("*")
+
+    const g: { kind: "g" };
+>g : { kind: "g"; }
+>kind : "g"
+
+    export default g;
+>g : { kind: "g"; }
+}
+
+declare module "a:*" with { type: "css" } {
+>"a:*" : typeof import("a:*")
+>type : error
+
+    const d: { kind: "d" };
+>d : { kind: "d"; }
+>kind : "d"
+
+    export default d;
+>d : { kind: "d"; }
+}
+
+declare module "a:b" with { type: "css" } {
+>"a:b" : typeof import("a:b")
+>type : error
+
+    const e: { kind: "e" };
+>e : { kind: "e"; }
+>kind : "e"
+
+    export default e;
+>e : { kind: "e"; }
+}
+
+declare module "a:d" with { type: "json" } {
+>"a:d" : typeof import("a:d")
+>type : error
+
+    const f: { kind: "f" };
+>f : { kind: "f"; }
+>kind : "f"
+
+    export default f;
+>f : { kind: "f"; }
+}
+
+=== b.ts ===
+import a, { b } from "b:c" with { type: "css" };
+>a : { kind: "a"; }
+>b : true
+>type : error
+
+import c from "b:c" with { type: "json" };
+>c : { kind: "c"; }
+>type : error
+
+import d from "a:c" with { type: "css" };
+>d : { kind: "d"; }
+>type : error
+
+import e from "a:b" with { type: "css" };
+>e : { kind: "e"; }
+>type : error
+
+import f from "a:d" with { type: "json" };
+>f : { kind: "f"; }
+>type : error
+
+import g from "b:c";
+>g : { kind: "g"; }
+
+a satisfies { kind: "a" };
+>a satisfies { kind: "a" } : { kind: "a"; }
+>a : { kind: "a"; }
+>kind : "a"
+
+b satisfies true;
+>b satisfies true : true
+>b : true
+>true : true
+
+c satisfies { kind: "c" };
+>c satisfies { kind: "c" } : { kind: "c"; }
+>c : { kind: "c"; }
+>kind : "c"
+
+d satisfies { kind: "d" };
+>d satisfies { kind: "d" } : { kind: "d"; }
+>d : { kind: "d"; }
+>kind : "d"
+
+e satisfies { kind: "e" };
+>e satisfies { kind: "e" } : { kind: "e"; }
+>e : { kind: "e"; }
+>kind : "e"
+
+f satisfies { kind: "f" };
+>f satisfies { kind: "f" } : { kind: "f"; }
+>f : { kind: "f"; }
+>kind : "f"
+
+g satisfies { kind: "g" };
+>g satisfies { kind: "g" } : { kind: "g"; }
+>g : { kind: "g"; }
+>kind : "g"
+

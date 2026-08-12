@@ -775,20 +775,25 @@ func (b *Binder) bindModuleDeclaration(node *ast.Node) {
 			b.errorOnFirstToken(node, diagnostics.X_export_modifier_cannot_be_applied_to_ambient_modules_and_module_augmentations_since_they_are_always_visible)
 		}
 		if ast.IsModuleAugmentationExternal(node) {
-			b.declareModuleSymbol(node)
+			if node.AsModuleDeclaration().Attributes == nil {
+				b.declareModuleSymbol(node)
+			} else {
+				b.declareModuleAugmentation(node)
+			}
 		} else {
 			name := node.AsModuleDeclaration().Name()
-			symbol := b.declareSymbolAndAddToSymbolTable(node, ast.SymbolFlagsValueModule, ast.SymbolFlagsValueModuleExcludes)
-
 			if ast.IsStringLiteral(name) {
 				pattern := core.TryParsePattern(name.Text())
-				if !pattern.IsValid() {
-					// An invalid pattern - must have multiple wildcards.
+				if pattern.IsValid() {
+					if pattern.StarIndex >= 0 || node.AsModuleDeclaration().Attributes != nil {
+						b.declareAmbientModuleEntry(node, pattern)
+						return
+					}
+				} else {
 					b.errorOnFirstToken(name, diagnostics.Pattern_0_can_have_at_most_one_Asterisk_character, name.Text())
-				} else if pattern.StarIndex >= 0 {
-					b.file.PatternAmbientModules = append(b.file.PatternAmbientModules, &ast.PatternAmbientModule{Pattern: pattern, Symbol: symbol})
 				}
 			}
+			b.declareSymbolAndAddToSymbolTable(node, ast.SymbolFlagsValueModule, ast.SymbolFlagsValueModuleExcludes)
 		}
 	} else {
 		state := b.declareModuleSymbol(node)
@@ -808,6 +813,23 @@ func (b *Binder) bindModuleDeclaration(node *ast.Node) {
 			}
 		}
 	}
+}
+
+func (b *Binder) declareAmbientModuleEntry(node *ast.Node, pattern core.Pattern) {
+	symbol := b.newSymbol(ast.SymbolFlagsValueModule, b.getDeclarationName(node))
+	b.addDeclarationToSymbol(symbol, node, ast.SymbolFlagsValueModule)
+	b.file.AmbientModuleEntries = append(b.file.AmbientModuleEntries, &ast.AmbientModuleEntry{
+		Pattern:    pattern,
+		Symbol:     symbol,
+		Attributes: node.AsModuleDeclaration().Attributes,
+	})
+}
+
+func (b *Binder) declareModuleAugmentation(node *ast.Node) {
+	state := ast.GetModuleInstanceState(node)
+	flags := core.IfElse(state != ast.ModuleInstanceStateNonInstantiated, ast.SymbolFlagsValueModule, ast.SymbolFlagsNamespaceModule)
+	symbol := b.newSymbol(flags, b.getDeclarationName(node))
+	b.addDeclarationToSymbol(symbol, node, flags)
 }
 
 func (b *Binder) declareModuleSymbol(node *ast.Node) ast.ModuleInstanceState {

@@ -1,0 +1,71 @@
+//// [tests/cases/conformance/importAttributes/importAttributes20.ts] ////
+
+=== a.ts ===
+declare module "*.css" {
+>"*.css" : typeof import("*.css")
+
+    const a: { kind: "a" };
+>a : { kind: "a"; }
+>kind : "a"
+
+    export default a;
+>a : { kind: "a"; }
+}
+
+declare module "*.css" with { type: "css" } {
+>"*.css" : typeof import("*.css")
+>type : error
+
+    const b: { kind: "b" };
+>b : { kind: "b"; }
+>kind : "b"
+
+    export const d: true;
+>d : true
+>true : true
+
+    export default b;
+>b : { kind: "b"; }
+}
+
+=== b.ts ===
+import a, { c } from "a.css";
+>a : { kind: "a"; }
+>c : true
+
+import b, { d } from "a.css" with { type: "css" };
+>b : { kind: "b"; }
+>d : true
+>type : error
+
+a satisfies { kind: "a" };
+>a satisfies { kind: "a" } : { kind: "a"; }
+>a : { kind: "a"; }
+>kind : "a"
+
+b satisfies { kind: "b" };
+>b satisfies { kind: "b" } : { kind: "b"; }
+>b : { kind: "b"; }
+>kind : "b"
+
+c satisfies true;
+>c satisfies true : true
+>c : true
+>true : true
+
+d satisfies true;
+>d satisfies true : true
+>d : true
+>true : true
+
+=== c.ts ===
+export {};
+
+declare module "a.css" {
+>"a.css" : typeof import("a.css")
+
+    export const c: true;
+>c : true
+>true : true
+}
+

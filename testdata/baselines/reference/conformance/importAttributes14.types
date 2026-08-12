@@ -1,0 +1,163 @@
+//// [tests/cases/conformance/importAttributes/importAttributes14.ts] ////
+
+=== a.ts ===
+declare module "*.css" with { type: "css" } {
+>"*.css" : typeof import("*.css")
+>type : any
+
+    const a: { kind: "a" };
+>a : { kind: "a"; }
+>kind : "a"
+
+    export default a;
+>a : { kind: "a"; }
+}
+
+declare module "*.txt" {
+>"*.txt" : typeof import("*.txt")
+
+    const b: { kind: "b" };
+>b : { kind: "b"; }
+>kind : "b"
+
+    export default b;
+>b : { kind: "b"; }
+}
+
+declare module "*.wasm" with { type: "module", version: "1" } {
+>"*.wasm" : typeof import("*.wasm")
+>type : any
+>version : any
+
+    const c: { kind: "c" };
+>c : { kind: "c"; }
+>kind : "c"
+
+    export default c;
+>c : { kind: "c"; }
+}
+
+=== b.ts ===
+async function f() {
+>f : () => Promise<void>
+
+    const a = await import("a.css", { with: { type: "css" } });
+>a : typeof import("*.css")
+>await import("a.css", { with: { type: "css" } }) : typeof import("*.css")
+>import("a.css", { with: { type: "css" } }) : Promise<typeof import("*.css")>
+>"a.css" : "a.css"
+>{ with: { type: "css" } } : { with: { type: string; }; }
+>with : { type: string; }
+>{ type: "css" } : { type: string; }
+>type : string
+>"css" : "css"
+
+    const b = await import("a.txt");
+>b : typeof import("*.txt")
+>await import("a.txt") : typeof import("*.txt")
+>import("a.txt") : Promise<typeof import("*.txt")>
+>"a.txt" : "a.txt"
+
+    const c = await import("a.wasm", { with: { version: "1", type: "module" } });
+>c : typeof import("*.wasm")
+>await import("a.wasm", { with: { version: "1", type: "module" } }) : typeof import("*.wasm")
+>import("a.wasm", { with: { version: "1", type: "module" } }) : Promise<typeof import("*.wasm")>
+>"a.wasm" : "a.wasm"
+>{ with: { version: "1", type: "module" } } : { with: { version: string; type: string; }; }
+>with : { version: string; type: string; }
+>{ version: "1", type: "module" } : { version: string; type: string; }
+>version : string
+>"1" : "1"
+>type : string
+>"module" : "module"
+
+    const d = await import("b.css", { with: { type: "style" } });
+>d : any
+>await import("b.css", { with: { type: "style" } }) : any
+>import("b.css", { with: { type: "style" } }) : Promise<any>
+>"b.css" : "b.css"
+>{ with: { type: "style" } } : { with: { type: string; }; }
+>with : { type: string; }
+>{ type: "style" } : { type: string; }
+>type : string
+>"style" : "style"
+
+    const e = await import("b.txt", { with: { type: "text" } });
+>e : any
+>await import("b.txt", { with: { type: "text" } }) : any
+>import("b.txt", { with: { type: "text" } }) : Promise<any>
+>"b.txt" : "b.txt"
+>{ with: { type: "text" } } : { with: { type: string; }; }
+>with : { type: string; }
+>{ type: "text" } : { type: string; }
+>type : string
+>"text" : "text"
+
+    const f = await import("b.wasm", { with: { type: "module" } });
+>f : any
+>await import("b.wasm", { with: { type: "module" } }) : any
+>import("b.wasm", { with: { type: "module" } }) : Promise<any>
+>"b.wasm" : "b.wasm"
+>{ with: { type: "module" } } : { with: { type: string; }; }
+>with : { type: string; }
+>{ type: "module" } : { type: string; }
+>type : string
+>"module" : "module"
+
+    const g = await import("c.wasm", { with: { type: "module", version: "1", extra: "value" } });
+>g : any
+>await import("c.wasm", { with: { type: "module", version: "1", extra: "value" } }) : any
+>import("c.wasm", { with: { type: "module", version: "1", extra: "value" } }) : Promise<any>
+>"c.wasm" : "c.wasm"
+>{ with: { type: "module", version: "1", extra: "value" } } : { with: { type: string; version: string; extra: string; }; }
+>with : { type: string; version: string; extra: string; }
+>{ type: "module", version: "1", extra: "value" } : { type: string; version: string; extra: string; }
+>type : string
+>"module" : "module"
+>version : string
+>"1" : "1"
+>extra : string
+>"value" : "value"
+
+    a.default satisfies { kind: "a" };
+>a.default satisfies { kind: "a" } : { kind: "a"; }
+>a.default : { kind: "a"; }
+>a : typeof import("*.css")
+>default : { kind: "a"; }
+>kind : "a"
+
+    b.default satisfies { kind: "b" };
+>b.default satisfies { kind: "b" } : { kind: "b"; }
+>b.default : { kind: "b"; }
+>b : typeof import("*.txt")
+>default : { kind: "b"; }
+>kind : "b"
+
+    c.default satisfies { kind: "c" };
+>c.default satisfies { kind: "c" } : { kind: "c"; }
+>c.default : { kind: "c"; }
+>c : typeof import("*.wasm")
+>default : { kind: "c"; }
+>kind : "c"
+
+    d.default;
+>d.default : any
+>d : any
+>default : any
+
+    e.default;
+>e.default : any
+>e : any
+>default : any
+
+    f.default;
+>f.default : any
+>f : any
+>default : any
+
+    g.default;
+>g.default : any
+>g : any
+>default : any
+}
+

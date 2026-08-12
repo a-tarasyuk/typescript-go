@@ -3825,6 +3825,10 @@ func (p *Printer) emitModuleDeclaration(node *ast.ModuleDeclaration) {
 		p.emitNestedModuleName(module.Name())
 		body = module.Body
 	}
+	if node.Attributes != nil {
+		p.writeSpace()
+		p.emitImportAttributes(node.Attributes.AsImportAttributes())
+	}
 	if body == nil {
 		p.writeTrailingSemicolon()
 	} else {

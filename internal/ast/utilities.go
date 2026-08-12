@@ -1943,8 +1943,38 @@ func GetImportAttributes(node *Node) *Node {
 		return node.AsImportDeclaration().Attributes
 	case KindExportDeclaration:
 		return node.AsExportDeclaration().Attributes
+	case KindImportType:
+		return node.AsImportTypeNode().Attributes
+	case KindImportEqualsDeclaration:
+		return nil
+	case KindCallExpression:
+		if IsImportCall(node) {
+			arguments := node.Arguments()
+			if len(arguments) >= 2 {
+				options := SkipParentheses(arguments[1])
+				if IsObjectLiteralExpression(options) {
+					initializer := getPropertyAssignmentInitializer(options.AsObjectLiteralExpression(), "with")
+					if initializer != nil {
+						return SkipParentheses(initializer)
+					}
+				}
+			}
+		}
+		return nil
 	}
 	panic("Unhandled case in getImportAttributes")
+}
+
+func getPropertyAssignmentInitializer(objectLiteral *ObjectLiteralExpression, name string) *Node {
+	for _, property := range objectLiteral.Properties.Nodes {
+		if IsPropertyAssignment(property) {
+			propertyName, ok := TryGetTextOfPropertyName(property.Name())
+			if ok && propertyName == name {
+				return property.AsPropertyAssignment().Initializer
+			}
+		}
+	}
+	return nil
 }
 
 func getImportTypeNodeLiteral(node *Node) *Node {
@@ -3517,6 +3547,7 @@ func ReplaceModifiers(factory *NodeFactory, node *Node, modifierArray *ModifierL
 			modifierArray,
 			node.AsModuleDeclaration().Keyword,
 			node.Name(),
+			node.AsModuleDeclaration().Attributes,
 			node.Body(),
 		)
 	case KindImportEqualsDeclaration:

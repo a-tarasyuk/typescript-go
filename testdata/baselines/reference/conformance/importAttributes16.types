@@ -1,0 +1,109 @@
+//// [tests/cases/conformance/importAttributes/importAttributes16.ts] ////
+
+=== a.ts ===
+declare module "*" with { type: "css" } {
+>"*" : typeof import("*")
+>type : error
+
+    const a: { kind: "a" };
+>a : { kind: "a"; }
+>kind : "a"
+
+    export default a;
+>a : { kind: "a"; }
+}
+
+declare module "*" {
+>"*" : typeof import("*")
+
+    const b: { kind: "b" };
+>b : { kind: "b"; }
+>kind : "b"
+
+    export default b;
+>b : { kind: "b"; }
+}
+
+declare module "a:*" with { type: "json" } {
+>"a:*" : typeof import("a:*")
+>type : error
+
+    const c: { kind: "c" };
+>c : { kind: "c"; }
+>kind : "c"
+
+    export default c;
+>c : { kind: "c"; }
+}
+
+declare module "b:c" with { type: "json" } {
+>"b:c" : typeof import("b:c")
+>type : error
+
+    const d: { kind: "d" };
+>d : { kind: "d"; }
+>kind : "d"
+
+    export default d;
+>d : { kind: "d"; }
+}
+
+declare module "c:d" with { type: "css" } {
+>"c:d" : typeof import("c:d")
+>type : error
+
+    const e: { kind: "e" };
+>e : { kind: "e"; }
+>kind : "e"
+
+    export default e;
+>e : { kind: "e"; }
+}
+
+declare module "d:e" {
+>"d:e" : typeof import("d:e")
+
+    const f: { kind: "f" };
+>f : { kind: "f"; }
+>kind : "f"
+
+    export default f;
+>f : { kind: "f"; }
+}
+
+=== b.ts ===
+import a from "a:b" with { type: "css" };
+>a : { kind: "a"; }
+>type : error
+
+import b from "b:c" with { type: "css" };
+>b : { kind: "a"; }
+>type : error
+
+import c from "c:d";
+>c : { kind: "b"; }
+
+import d from "d:e" with { type: "css" };
+>d : { kind: "a"; }
+>type : error
+
+a satisfies { kind: "a" };
+>a satisfies { kind: "a" } : { kind: "a"; }
+>a : { kind: "a"; }
+>kind : "a"
+
+b satisfies { kind: "a" };
+>b satisfies { kind: "a" } : { kind: "a"; }
+>b : { kind: "a"; }
+>kind : "a"
+
+c satisfies { kind: "b" };
+>c satisfies { kind: "b" } : { kind: "b"; }
+>c : { kind: "b"; }
+>kind : "b"
+
+d satisfies { kind: "a" };
+>d satisfies { kind: "a" } : { kind: "a"; }
+>d : { kind: "a"; }
+>kind : "a"
+

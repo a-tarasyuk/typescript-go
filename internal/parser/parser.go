@@ -2214,6 +2214,7 @@ func (p *Parser) parseModuleDeclaration(pos int, jsdoc jsdocScannerInfo, modifie
 
 func (p *Parser) parseAmbientExternalModuleDeclaration(pos int, jsdoc jsdocScannerInfo, modifiers *ast.ModifierList) *ast.Node {
 	var name *ast.Node
+	var attributes *ast.Node
 	keyword := ast.KindModuleKeyword
 	saveHasAwaitIdentifier := p.statementHasAwaitIdentifier
 	if p.token == ast.KindGlobalKeyword {
@@ -2223,6 +2224,7 @@ func (p *Parser) parseAmbientExternalModuleDeclaration(pos int, jsdoc jsdocScann
 	} else {
 		// parse string literal
 		name = p.parseLiteralExpression()
+		attributes = p.tryParseImportAttributes()
 	}
 	var body *ast.Node
 	if p.token == ast.KindOpenBraceToken {
@@ -2230,7 +2232,7 @@ func (p *Parser) parseAmbientExternalModuleDeclaration(pos int, jsdoc jsdocScann
 	} else {
 		p.parseSemicolon()
 	}
-	result := p.finishNode(p.factory.NewModuleDeclaration(modifiers, keyword, name, body), pos)
+	result := p.finishNode(p.factory.NewModuleDeclaration(modifiers, keyword, name, attributes, body), pos)
 	p.withJSDoc(result, jsdoc)
 	p.statementHasAwaitIdentifier = saveHasAwaitIdentifier
 	return result
@@ -2266,7 +2268,7 @@ func (p *Parser) parseModuleOrNamespaceDeclaration(pos int, jsdoc jsdocScannerIn
 	} else {
 		body = p.parseModuleBlock()
 	}
-	result := p.finishNode(p.factory.NewModuleDeclaration(modifiers, keyword, name, body), pos)
+	result := p.finishNode(p.factory.NewModuleDeclaration(modifiers, keyword, name, nil /*attributes*/, body), pos)
 	p.withJSDoc(result, jsdoc)
 	p.checkJSSyntax(result)
 	p.statementHasAwaitIdentifier = saveHasAwaitIdentifier

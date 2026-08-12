@@ -1,0 +1,193 @@
+//// [tests/cases/conformance/importAttributes/importAttributes21.ts] ////
+
+=== a.ts ===
+declare module "a:b" with { type: "css" } {
+>"a:b" : typeof import("a:b")
+>type : error
+
+    export const a: "a";
+>a : "a"
+}
+
+declare module "a:b" with { type: "json" } {
+>"a:b" : typeof import("a:b")
+>type : error
+
+    export const b: "b";
+>b : "b"
+}
+
+declare module "a:b" {
+>"a:b" : typeof import("a:b")
+
+    export const d: "d";
+>d : "d"
+}
+
+declare module "a:c" with {} {
+>"a:c" : typeof import("a:c")
+
+    export const g: "g";
+>g : "g"
+}
+
+declare module "a:c" {
+>"a:c" : typeof import("a:c")
+
+    export const h: "h";
+>h : "h"
+}
+
+=== b.ts ===
+export {};
+
+declare module "a:b" with { type: "css" } {
+>"a:b" : typeof import("a:b")
+>type : error
+
+    export const c: "c";
+>c : "c"
+}
+
+declare module "a:b" with { type: "css" } {
+>"a:b" : typeof import("a:b")
+>type : error
+
+    export const e: "e";
+>e : "e"
+}
+
+declare module "a:b" with { type: "json" } {
+>"a:b" : typeof import("a:b")
+>type : error
+
+    export const f: "f";
+>f : "f"
+}
+
+=== c.ts ===
+import * as a from "a:b" with { type: "css" };
+>a : typeof a
+>type : error
+
+import * as b from "a:b" with { type: "json" };
+>b : typeof b
+>type : error
+
+import * as c from "a:b";
+>c : typeof c
+
+import * as d from "a:c" with {};
+>d : typeof d
+
+import * as e from "a:c";
+>e : typeof e
+
+a.a satisfies "a";
+>a.a satisfies "a" : "a"
+>a.a : "a"
+>a : typeof a
+>a : "a"
+
+a.c satisfies "c";
+>a.c satisfies "c" : "c"
+>a.c : "c"
+>a : typeof a
+>c : "c"
+
+a.e satisfies "e";
+>a.e satisfies "e" : "e"
+>a.e : "e"
+>a : typeof a
+>e : "e"
+
+b.b satisfies "b";
+>b.b satisfies "b" : "b"
+>b.b : "b"
+>b : typeof b
+>b : "b"
+
+b.f satisfies "f";
+>b.f satisfies "f" : "f"
+>b.f : "f"
+>b : typeof b
+>f : "f"
+
+c.d satisfies "d";
+>c.d satisfies "d" : "d"
+>c.d : "d"
+>c : typeof c
+>d : "d"
+
+d.g satisfies "g";
+>d.g satisfies "g" : "g"
+>d.g : "g"
+>d : typeof d
+>g : "g"
+
+e.h satisfies "h";
+>e.h satisfies "h" : "h"
+>e.h : "h"
+>e : typeof e
+>h : "h"
+
+// @ts-expect-error
+a.b;
+>a.b : error
+>a : typeof a
+>b : any
+
+// @ts-expect-error
+b.a;
+>b.a : error
+>b : typeof b
+>a : any
+
+// @ts-expect-error
+b.c;
+>b.c : error
+>b : typeof b
+>c : any
+
+// @ts-expect-error
+a.f;
+>a.f : error
+>a : typeof a
+>f : any
+
+// @ts-expect-error
+b.e;
+>b.e : error
+>b : typeof b
+>e : any
+
+// @ts-expect-error
+c.a;
+>c.a : error
+>c : typeof c
+>a : any
+
+// @ts-expect-error
+c.b;
+>c.b : error
+>c : typeof c
+>b : any
+
+// @ts-expect-error
+c.c;
+>c.c : error
+>c : typeof c
+>c : any
+
+// @ts-expect-error
+d.h;
+>d.h : error
+>d : typeof d
+>h : any
+
+// @ts-expect-error
+e.g;
+>e.g : error
+>e : typeof e
+>g : any
+

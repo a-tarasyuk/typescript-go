@@ -1,0 +1,83 @@
+//// [tests/cases/conformance/importAttributes/importAttributes12.ts] ////
+
+=== a.ts ===
+declare module "*.css" with { type: "css" } {
+>"*.css" : Symbol("*.css", Decl(a.ts, 0, 0))
+
+    const a: { kind: "a" };
+>a : Symbol(a, Decl(a.ts, 1, 9))
+>kind : Symbol(kind, Decl(a.ts, 1, 14))
+
+    export default a;
+>a : Symbol(a, Decl(a.ts, 1, 9))
+}
+
+declare module "*.json" with { type: "json" } {
+>"*.json" : Symbol("*.json", Decl(a.ts, 3, 1))
+
+    const b: { kind: "b" };
+>b : Symbol(b, Decl(a.ts, 6, 9))
+>kind : Symbol(kind, Decl(a.ts, 6, 14))
+
+    export default b;
+>b : Symbol(b, Decl(a.ts, 6, 9))
+}
+
+declare module "a:b" with { type: "json", mode: "raw" } {
+>"a:b" : Symbol("a:b", Decl(a.ts, 8, 1))
+
+    const c: { kind: "c" };
+>c : Symbol(c, Decl(a.ts, 11, 9))
+>kind : Symbol(kind, Decl(a.ts, 11, 14))
+
+    export const d: true;
+>d : Symbol(d, Decl(a.ts, 12, 16))
+
+    export default c;
+>c : Symbol(c, Decl(a.ts, 11, 9))
+}
+
+declare module "*.txt" {
+>"*.txt" : Symbol("*.txt", Decl(a.ts, 14, 1))
+
+    const e: { kind: "e" };
+>e : Symbol(e, Decl(a.ts, 17, 9))
+>kind : Symbol(kind, Decl(a.ts, 17, 14))
+
+    export default e;
+>e : Symbol(e, Decl(a.ts, 17, 9))
+}
+
+=== b.ts ===
+import a from "./a.css" with { type: "css" };
+>a : Symbol(a, Decl(b.ts, 0, 6))
+
+import b from "./b.json" with { type: "json" };
+>b : Symbol(b, Decl(b.ts, 1, 6))
+
+import c, { d } from "a:b" with { mode: "raw", type: "json" };
+>c : Symbol(c, Decl(b.ts, 2, 6))
+>d : Symbol(d, Decl(b.ts, 2, 11))
+
+import e from "./c.txt";
+>e : Symbol(e, Decl(b.ts, 3, 6))
+
+a satisfies { kind: "a" };
+>a : Symbol(a, Decl(b.ts, 0, 6))
+>kind : Symbol(kind, Decl(b.ts, 5, 13))
+
+b satisfies { kind: "b" };
+>b : Symbol(b, Decl(b.ts, 1, 6))
+>kind : Symbol(kind, Decl(b.ts, 6, 13))
+
+c satisfies { kind: "c" };
+>c : Symbol(c, Decl(b.ts, 2, 6))
+>kind : Symbol(kind, Decl(b.ts, 7, 13))
+
+d satisfies true;
+>d : Symbol(d, Decl(b.ts, 2, 11))
+
+e satisfies { kind: "e" };
+>e : Symbol(e, Decl(b.ts, 3, 6))
+>kind : Symbol(kind, Decl(b.ts, 9, 13))
+

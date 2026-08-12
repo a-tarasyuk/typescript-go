@@ -2365,11 +2365,11 @@ func (node *Node) IsJSDoc() bool {
 
 // JSDocText
 
-// PatternAmbientModule
-
-type PatternAmbientModule struct {
-	Pattern core.Pattern
-	Symbol  *Symbol
+// AmbientModuleEntry
+type AmbientModuleEntry struct {
+	Pattern    core.Pattern
+	Symbol     *Symbol
+	Attributes *Node
 }
 
 type CommentDirectiveKind int32
@@ -2505,12 +2505,12 @@ type SourceFile struct {
 
 	// Fields set by binder
 
-	isBound               atomic.Bool
-	bindOnce              sync.Once
-	bindDiagnostics       []*Diagnostic
-	SymbolCount           int
-	PatternAmbientModules []*PatternAmbientModule
-	GlobalExports         SymbolTable
+	isBound              atomic.Bool
+	bindOnce             sync.Once
+	bindDiagnostics      []*Diagnostic
+	SymbolCount          int
+	AmbientModuleEntries []*AmbientModuleEntry
+	GlobalExports        SymbolTable
 
 	// Fields set by ECMALineMap
 

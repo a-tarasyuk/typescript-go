@@ -1,0 +1,92 @@
+//// [tests/cases/conformance/importAttributes/importAttributes13.ts] ////
+
+=== a.ts ===
+declare module "*.css" with { type: "css" } {
+>"*.css" : typeof import("*.css")
+>type : any
+
+    const a: never;
+>a : never
+
+    export default a;
+>a : never
+}
+
+declare module "*.txt" {
+>"*.txt" : typeof import("*.txt")
+
+    const b: never;
+>b : never
+
+    export default b;
+>b : never
+}
+
+declare module "*.wasm" with { type: "module", version: "1" } {
+>"*.wasm" : typeof import("*.wasm")
+>type : any
+>version : any
+
+    const c: never;
+>c : never
+
+    export default c;
+>c : never
+}
+
+declare module "a:b" with { type: 1 } {}
+>"a:b" : typeof import("a:b")
+>type : any
+
+declare module "a:c" with { type: `css` } {}
+>"a:c" : typeof import("a:c")
+>type : any
+
+declare module "a:d" assert { type: "css" } {}
+>"a:d" : typeof import("a:d")
+>type : any
+
+=== b.ts ===
+import a from "a.css" with { type: "style" };
+>a : any
+>type : any
+
+import b from "b.css";
+>b : any
+
+import c from "a.txt" with { type: "text" };
+>c : any
+>type : any
+
+import d from "a.wasm" with { type: "module" };
+>d : any
+>type : any
+
+import e from "b.wasm" with { type: "module", version: "1", extra: "value" };
+>e : any
+>type : any
+>version : any
+>extra : any
+
+import f from "c.css" assert { type: "css" };
+>f : never
+>type : any
+
+a;
+>a : any
+
+b;
+>b : any
+
+c;
+>c : any
+
+d;
+>d : any
+
+e;
+>e : any
+
+f;
+>f : never
+

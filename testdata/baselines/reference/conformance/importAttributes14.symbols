@@ -1,0 +1,110 @@
+//// [tests/cases/conformance/importAttributes/importAttributes14.ts] ////
+
+=== a.ts ===
+declare module "*.css" with { type: "css" } {
+>"*.css" : Symbol("*.css", Decl(a.ts, 0, 0))
+
+    const a: { kind: "a" };
+>a : Symbol(a, Decl(a.ts, 1, 9))
+>kind : Symbol(kind, Decl(a.ts, 1, 14))
+
+    export default a;
+>a : Symbol(a, Decl(a.ts, 1, 9))
+}
+
+declare module "*.txt" {
+>"*.txt" : Symbol("*.txt", Decl(a.ts, 3, 1))
+
+    const b: { kind: "b" };
+>b : Symbol(b, Decl(a.ts, 6, 9))
+>kind : Symbol(kind, Decl(a.ts, 6, 14))
+
+    export default b;
+>b : Symbol(b, Decl(a.ts, 6, 9))
+}
+
+declare module "*.wasm" with { type: "module", version: "1" } {
+>"*.wasm" : Symbol("*.wasm", Decl(a.ts, 8, 1))
+
+    const c: { kind: "c" };
+>c : Symbol(c, Decl(a.ts, 11, 9))
+>kind : Symbol(kind, Decl(a.ts, 11, 14))
+
+    export default c;
+>c : Symbol(c, Decl(a.ts, 11, 9))
+}
+
+=== b.ts ===
+async function f() {
+>f : Symbol(f, Decl(b.ts, 0, 0))
+
+    const a = await import("a.css", { with: { type: "css" } });
+>a : Symbol(a, Decl(b.ts, 1, 9))
+>"a.css" : Symbol("*.css", Decl(a.ts, 0, 0))
+>with : Symbol(with, Decl(b.ts, 1, 37))
+>type : Symbol(type, Decl(b.ts, 1, 45))
+
+    const b = await import("a.txt");
+>b : Symbol(b, Decl(b.ts, 2, 9))
+>"a.txt" : Symbol("*.txt", Decl(a.ts, 3, 1))
+
+    const c = await import("a.wasm", { with: { version: "1", type: "module" } });
+>c : Symbol(c, Decl(b.ts, 3, 9))
+>"a.wasm" : Symbol("*.wasm", Decl(a.ts, 8, 1))
+>with : Symbol(with, Decl(b.ts, 3, 38))
+>version : Symbol(version, Decl(b.ts, 3, 46))
+>type : Symbol(type, Decl(b.ts, 3, 60))
+
+    const d = await import("b.css", { with: { type: "style" } });
+>d : Symbol(d, Decl(b.ts, 4, 9))
+>with : Symbol(with, Decl(b.ts, 4, 37))
+>type : Symbol(type, Decl(b.ts, 4, 45))
+
+    const e = await import("b.txt", { with: { type: "text" } });
+>e : Symbol(e, Decl(b.ts, 5, 9))
+>with : Symbol(with, Decl(b.ts, 5, 37))
+>type : Symbol(type, Decl(b.ts, 5, 45))
+
+    const f = await import("b.wasm", { with: { type: "module" } });
+>f : Symbol(f, Decl(b.ts, 6, 9))
+>with : Symbol(with, Decl(b.ts, 6, 38))
+>type : Symbol(type, Decl(b.ts, 6, 46))
+
+    const g = await import("c.wasm", { with: { type: "module", version: "1", extra: "value" } });
+>g : Symbol(g, Decl(b.ts, 7, 9))
+>with : Symbol(with, Decl(b.ts, 7, 38))
+>type : Symbol(type, Decl(b.ts, 7, 46))
+>version : Symbol(version, Decl(b.ts, 7, 62))
+>extra : Symbol(extra, Decl(b.ts, 7, 76))
+
+    a.default satisfies { kind: "a" };
+>a.default : Symbol(default, Decl(a.ts, 1, 27))
+>a : Symbol(a, Decl(b.ts, 1, 9))
+>default : Symbol(default, Decl(a.ts, 1, 27))
+>kind : Symbol(kind, Decl(b.ts, 9, 25))
+
+    b.default satisfies { kind: "b" };
+>b.default : Symbol(default, Decl(a.ts, 6, 27))
+>b : Symbol(b, Decl(b.ts, 2, 9))
+>default : Symbol(default, Decl(a.ts, 6, 27))
+>kind : Symbol(kind, Decl(b.ts, 10, 25))
+
+    c.default satisfies { kind: "c" };
+>c.default : Symbol(default, Decl(a.ts, 11, 27))
+>c : Symbol(c, Decl(b.ts, 3, 9))
+>default : Symbol(default, Decl(a.ts, 11, 27))
+>kind : Symbol(kind, Decl(b.ts, 11, 25))
+
+    d.default;
+>d : Symbol(d, Decl(b.ts, 4, 9))
+
+    e.default;
+>e : Symbol(e, Decl(b.ts, 5, 9))
+
+    f.default;
+>f : Symbol(f, Decl(b.ts, 6, 9))
+
+    g.default;
+>g : Symbol(g, Decl(b.ts, 7, 9))
+}
+

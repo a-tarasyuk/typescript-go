@@ -1,0 +1,49 @@
+b.ts(5,28): error TS2307: Cannot find module 'b.css' or its corresponding type declarations.
+b.ts(6,28): error TS2307: Cannot find module 'b.txt' or its corresponding type declarations.
+b.ts(7,28): error TS2307: Cannot find module 'b.wasm' or its corresponding type declarations.
+b.ts(8,28): error TS2307: Cannot find module 'c.wasm' or its corresponding type declarations.
+
+
+==== a.ts (0 errors) ====
+    declare module "*.css" with { type: "css" } {
+        const a: { kind: "a" };
+        export default a;
+    }
+    
+    declare module "*.txt" {
+        const b: { kind: "b" };
+        export default b;
+    }
+    
+    declare module "*.wasm" with { type: "module", version: "1" } {
+        const c: { kind: "c" };
+        export default c;
+    }
+    
+==== b.ts (4 errors) ====
+    async function f() {
+        const a = await import("a.css", { with: { type: "css" } });
+        const b = await import("a.txt");
+        const c = await import("a.wasm", { with: { version: "1", type: "module" } });
+        const d = await import("b.css", { with: { type: "style" } });
+                               ~~~~~~~
+!!! error TS2307: Cannot find module 'b.css' or its corresponding type declarations.
+        const e = await import("b.txt", { with: { type: "text" } });
+                               ~~~~~~~
+!!! error TS2307: Cannot find module 'b.txt' or its corresponding type declarations.
+        const f = await import("b.wasm", { with: { type: "module" } });
+                               ~~~~~~~~
+!!! error TS2307: Cannot find module 'b.wasm' or its corresponding type declarations.
+        const g = await import("c.wasm", { with: { type: "module", version: "1", extra: "value" } });
+                               ~~~~~~~~
+!!! error TS2307: Cannot find module 'c.wasm' or its corresponding type declarations.
+    
+        a.default satisfies { kind: "a" };
+        b.default satisfies { kind: "b" };
+        c.default satisfies { kind: "c" };
+        d.default;
+        e.default;
+        f.default;
+        g.default;
+    }
+    
