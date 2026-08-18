@@ -309,6 +309,39 @@ func TestIncludeProcessorDiagnosticsWithMissingFileCasing(t *testing.T) {
 	}())
 }
 
+func TestSourcePhaseWasmIsNotAnUnresolvedImport(t *testing.T) {
+	t.Parallel()
+
+	fs := vfstest.FromMap(map[string]string{
+		"/repo/node_modules/a/package.json": `{"name":"a","exports":"./a.wasm"}`,
+		"/repo/node_modules/a/a.wasm":       "\x00asm\x01\x00\x00\x00",
+		"/repo/node_modules/b/package.json": `{"name":"b","exports":"./b.wasm"}`,
+		"/repo/node_modules/b/b.d.wasm.ts":  "export {};",
+		"/repo/src/index.ts":                `import source a from "a"; import source b from "b"; import source c from "missing";`,
+	}, true)
+	opts := core.CompilerOptions{
+		Module:           core.ModuleKindESNext,
+		ModuleResolution: core.ModuleResolutionKindBundler,
+		Target:           core.ScriptTargetESNext,
+		NoLib:            core.TSTrue,
+	}
+	program := compiler.NewProgram(compiler.ProgramOptions{
+		Config: &tsoptions.ParsedCommandLine{
+			ParsedConfig: &core.ParsedOptions{
+				FileNames:       []string{"/repo/src/index.ts"},
+				CompilerOptions: &opts,
+			},
+		},
+		Host: compiler.NewCompilerHost("/repo", fs, bundled.LibPath(), nil /*extendedConfigCache*/, nil /*trace*/),
+	})
+
+	unresolvedImports := program.GetUnresolvedImports()
+	assert.Assert(t, !unresolvedImports.Has("a"))
+	assert.Assert(t, !unresolvedImports.Has("b"))
+	assert.Assert(t, unresolvedImports.Has("missing"))
+	assert.Equal(t, unresolvedImports.Len(), 1)
+}
+
 func BenchmarkNewProgram(b *testing.B) {
 	if !bundled.Embedded {
 		// Without embedding, we'd need to read all of the lib files out from disk into the MapFS.

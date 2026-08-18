@@ -1,0 +1,22 @@
+//// [tests/cases/conformance/importSource/importSource20.ts] ////
+
+=== b.ts ===
+import source a from "a";
+>a : Symbol(a, Decl(b.ts, 0, 6))
+
+const b: WebAssembly.Module = a;
+>b : Symbol(b, Decl(b.ts, 1, 5))
+>WebAssembly : Symbol(WebAssembly, Decl(lib.dom.d.ts, --, --))
+>Module : Symbol(WebAssembly.Module, Decl(lib.dom.d.ts, --, --), Decl(lib.dom.d.ts, --, --))
+>a : Symbol(a, Decl(b.ts, 0, 6))
+
+const c = import.source("a");
+>c : Symbol(c, Decl(b.ts, 3, 5))
+
+const d: Promise<WebAssembly.Module> = c;
+>d : Symbol(d, Decl(b.ts, 4, 5))
+>Promise : Symbol(Promise, Decl(lib.es5.d.ts, --, --), Decl(lib.es2015.iterable.d.ts, --, --), Decl(lib.es2015.promise.d.ts, --, --), Decl(lib.es2015.symbol.wellknown.d.ts, --, --), Decl(lib.es2018.promise.d.ts, --, --))
+>WebAssembly : Symbol(WebAssembly, Decl(lib.dom.d.ts, --, --))
+>Module : Symbol(WebAssembly.Module, Decl(lib.dom.d.ts, --, --), Decl(lib.dom.d.ts, --, --))
+>c : Symbol(c, Decl(b.ts, 3, 5))
+

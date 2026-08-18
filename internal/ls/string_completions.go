@@ -657,7 +657,11 @@ func (l *LanguageService) getStringLiteralCompletionsFromModuleNamesWorker(
 	scriptPath := file.Path()
 	scriptDirectory := scriptPath.GetDirectoryPath()
 	options := program.Options()
+	importPhase := module.GetImportPhaseForUsage(node)
 	extensionOptions := l.getExtensionOptions(options, referenceKindModuleSpecifier, file, mode, checker)
+	if importPhase == module.ImportPhaseSource {
+		extensionOptions.extensionsToSearch = core.AppendIfUnique(extensionOptions.extensionsToSearch, tspath.ExtensionWasm)
+	}
 
 	if isPathRelativeToScript(literalValue) ||
 		(options.Paths.Size() == 0 && (tspath.IsRootedDiskPath(literalValue) || tspath.IsUrl(literalValue))) {
@@ -676,6 +680,7 @@ func (l *LanguageService) getStringLiteralCompletionsFromModuleNamesWorker(
 			program,
 			checker,
 			extensionOptions,
+			importPhase,
 		)
 	}
 }
@@ -693,6 +698,7 @@ func (l *LanguageService) getCompletionEntriesForNonRelativeModules(
 	program *compiler.Program,
 	typeChecker *checker.Checker,
 	extensionOptions *extensionOptions,
+	importPhase module.ImportPhase,
 ) []moduleCompletionNameAndKind {
 	compilerOptions := program.Options()
 	paths := compilerOptions.Paths
@@ -713,7 +719,9 @@ func (l *LanguageService) getCompletionEntriesForNonRelativeModules(
 		})
 	}
 
-	l.getCompletionEntriesFromTypings(program, scriptPath, fragmentDirectory, extensionOptions, result)
+	if importPhase == module.ImportPhaseEvaluation {
+		l.getCompletionEntriesFromTypings(program, scriptPath, fragmentDirectory, extensionOptions, result)
+	}
 
 	if moduleResolutionUsesNodeModules(moduleResolution) {
 		// If looking for a global package name, don't just include everything in `node_modules` because that includes dependencies' own dependencies.
@@ -736,6 +744,11 @@ func (l *LanguageService) getCompletionEntriesForNonRelativeModules(
 			resolvePackageJsonImports := compilerOptions.GetResolvePackageJsonImports()
 			seenPackageScope := false
 			conditions := module.GetConditions(compilerOptions, mode)
+			if importPhase == module.ImportPhaseSource {
+				conditions = slices.DeleteFunc(conditions, func(condition string) bool {
+					return condition == "types"
+				})
+			}
 
 			// Returns true if the search should stop.
 			exportsOrImportsLookup := func(lookupTable *packagejson.ExportsOrImports, fragment string, baseDirectory string, isExports bool, isImports bool) bool {

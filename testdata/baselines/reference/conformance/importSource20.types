@@ -1,0 +1,22 @@
+//// [tests/cases/conformance/importSource/importSource20.ts] ////
+
+=== b.ts ===
+import source a from "a";
+>a : WebAssembly.Module
+
+const b: WebAssembly.Module = a;
+>b : WebAssembly.Module
+>WebAssembly : any
+>a : WebAssembly.Module
+
+const c = import.source("a");
+>c : Promise<WebAssembly.Module>
+>import.source("a") : Promise<WebAssembly.Module>
+>source : any
+>"a" : "a"
+
+const d: Promise<WebAssembly.Module> = c;
+>d : Promise<WebAssembly.Module>
+>WebAssembly : any
+>c : Promise<WebAssembly.Module>
+

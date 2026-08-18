@@ -1,0 +1,23 @@
+//// [tests/cases/conformance/importSource/importSource9.ts] ////
+
+=== a.d.wasm.ts ===
+export function add(a: number, b: number): number;
+>add : (a: number, b: number) => number
+>a : number
+>b : number
+
+=== b.ts ===
+/*comment a*/ import /*comment b*/ source /*comment c*/ a /*comment d*/ from /*comment e*/ "./a.wasm" /*comment f*/ with /*comment g*/ { type: "webassembly" } /*comment h*/;
+>a : WebAssembly.Module
+>type : error
+
+const b = a;
+>b : WebAssembly.Module
+>a : WebAssembly.Module
+
+const c = import /*comment i*/ . /*comment j*/ source /*comment k*/ ("./a.wasm");
+>c : Promise<WebAssembly.Module>
+>import /*comment i*/ . /*comment j*/ source /*comment k*/ ("./a.wasm") : Promise<WebAssembly.Module>
+>source : any
+>"./a.wasm" : "./a.wasm"
+

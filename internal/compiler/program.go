@@ -381,7 +381,8 @@ func (p *Program) canReplaceFileInProgram(file1 *ast.SourceFile, file2 *ast.Sour
 		file1.UsesUriStyleNodeCoreModules == file2.UsesUriStyleNodeCoreModules &&
 		slices.EqualFunc(file1.Imports(), file2.Imports(), func(n1 *ast.Node, n2 *ast.Node) bool {
 			return equalModuleSpecifiers(n1, n2) &&
-				p.GetModeForUsageLocation(file1, n1) == p.GetModeForUsageLocation(file2, n2)
+				p.GetModeForUsageLocation(file1, n1) == p.GetModeForUsageLocation(file2, n2) &&
+				module.GetImportPhaseForUsage(n1) == module.GetImportPhaseForUsage(n2)
 		}) &&
 		slices.EqualFunc(file1.ModuleAugmentations, file2.ModuleAugmentations, equalModuleAugmentationNames) &&
 		slices.Equal(file1.AmbientModuleNames, file2.AmbientModuleNames) &&
@@ -456,7 +457,8 @@ func (p *Program) extractUnresolvedImportsFromSourceFile(file *ast.SourceFile) [
 	resolvedModules := p.resolvedModules[file.Path()]
 	for cacheKey, resolution := range resolvedModules {
 		resolved := resolution.IsResolved()
-		if (!resolved || !tspath.ExtensionIsOneOf(resolution.Extension, tspath.SupportedTSExtensionsWithJsonFlat)) &&
+		resolvedSourcePhaseWasm := cacheKey.Phase == module.ImportPhaseSource && module.IsResolvedModuleForArbitraryExtension(resolution, tspath.ExtensionWasm)
+		if (!resolved || !tspath.ExtensionIsOneOf(resolution.Extension, tspath.SupportedTSExtensionsWithJsonFlat) && !resolvedSourcePhaseWasm) &&
 			!tspath.IsExternalModuleNameRelative(cacheKey.Name) {
 			unresolvedImports = append(unresolvedImports, cacheKey.Name)
 		}
@@ -519,8 +521,12 @@ func (p *Program) GetTypeCheckerForFileExclusive(ctx context.Context, file *ast.
 }
 
 func (p *Program) GetResolvedModule(file ast.HasFileName, moduleReference string, mode core.ResolutionMode) *module.ResolvedModule {
+	return p.getResolvedModule(file, moduleReference, mode, module.ImportPhaseEvaluation)
+}
+
+func (p *Program) getResolvedModule(file ast.HasFileName, moduleReference string, mode core.ResolutionMode, phase module.ImportPhase) *module.ResolvedModule {
 	if resolutions, ok := p.resolvedModules[file.Path()]; ok {
-		if resolved, ok := resolutions[module.ModeAwareCacheKey{Name: moduleReference, Mode: mode}]; ok {
+		if resolved, ok := resolutions[module.ModeAwareCacheKey{Name: moduleReference, Mode: mode, Phase: phase}]; ok {
 			return resolved
 		}
 	}
@@ -532,7 +538,8 @@ func (p *Program) GetResolvedModuleFromModuleSpecifier(file ast.HasFileName, mod
 		panic("moduleSpecifier must be a StringLiteralLike")
 	}
 	mode := p.GetModeForUsageLocation(file, moduleSpecifier)
-	return p.GetResolvedModule(file, moduleSpecifier.Text(), mode)
+	phase := module.GetImportPhaseForUsage(moduleSpecifier)
+	return p.getResolvedModule(file, moduleSpecifier.Text(), mode, phase)
 }
 
 func (p *Program) GetResolvedModules() map[tspath.Path]module.ModeAwareCache[*module.ResolvedModule] {
@@ -2010,7 +2017,7 @@ func (p *Program) collectPackageNames() *packageNamesInfo {
 					continue
 				}
 				if resolvedModules, ok := p.resolvedModules[file.Path()]; ok {
-					key := module.ModeAwareCacheKey{Name: imp.Text(), Mode: p.GetModeForUsageLocation(file, imp)}
+					key := module.ModeAwareCacheKey{Name: imp.Text(), Mode: p.GetModeForUsageLocation(file, imp), Phase: module.GetImportPhaseForUsage(imp)}
 					if resolvedModule, ok := resolvedModules[key]; ok && resolvedModule.IsResolved() {
 						if !resolvedModule.IsExternalLibraryImport {
 							continue
@@ -2187,6 +2194,7 @@ var plainJSErrors = collections.NewSetFromItems(
 	diagnostics.A_return_statement_cannot_be_used_inside_a_class_static_block.Code(),
 	diagnostics.A_set_accessor_cannot_have_rest_parameter.Code(),
 	diagnostics.A_set_accessor_must_have_exactly_one_parameter.Code(),
+	diagnostics.A_source_phase_import_must_specify_a_local_binding.Code(),
 	diagnostics.An_export_declaration_can_only_be_used_at_the_top_level_of_a_module.Code(),
 	diagnostics.An_export_declaration_cannot_have_modifiers.Code(),
 	diagnostics.An_import_declaration_can_only_be_used_at_the_top_level_of_a_module.Code(),
@@ -2210,8 +2218,10 @@ var plainJSErrors = collections.NewSetFromItems(
 	diagnostics.Jump_target_cannot_cross_function_boundary.Code(),
 	diagnostics.Line_terminator_not_permitted_before_arrow.Code(),
 	diagnostics.Modifiers_cannot_appear_here.Code(),
+	diagnostics.Named_and_namespace_imports_are_not_allowed_in_a_source_phase_import.Code(),
 	diagnostics.Only_a_single_variable_declaration_is_allowed_in_a_for_in_statement.Code(),
 	diagnostics.Only_a_single_variable_declaration_is_allowed_in_a_for_of_statement.Code(),
+	diagnostics.Optional_chaining_cannot_be_used_with_import_source.Code(),
 	diagnostics.Private_identifiers_are_not_allowed_outside_class_bodies.Code(),
 	diagnostics.Private_identifiers_are_only_allowed_in_class_bodies_and_may_only_be_used_as_part_of_a_class_member_declaration_property_access_or_on_the_left_hand_side_of_an_in_expression.Code(),
 	diagnostics.Property_0_is_not_accessible_outside_class_1_because_it_has_a_private_identifier.Code(),
@@ -2223,6 +2233,7 @@ var plainJSErrors = collections.NewSetFromItems(
 	diagnostics.Variable_declaration_list_cannot_be_empty.Code(),
 	diagnostics.X_0_and_1_operations_cannot_be_mixed_without_parentheses.Code(),
 	diagnostics.X_0_expected.Code(),
+	diagnostics.X_0_is_not_a_valid_meta_property_for_keyword_import_Did_you_mean_meta_defer_or_source.Code(),
 	diagnostics.X_0_is_not_a_valid_meta_property_for_keyword_1_Did_you_mean_2.Code(),
 	diagnostics.X_0_list_cannot_be_empty.Code(),
 	diagnostics.X_0_modifier_already_seen.Code(),

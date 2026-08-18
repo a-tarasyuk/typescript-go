@@ -8,6 +8,7 @@ import (
 
 	"github.com/microsoft/typescript-go/internal/core"
 	"github.com/microsoft/typescript-go/internal/module"
+	"github.com/microsoft/typescript-go/internal/tspath"
 	"github.com/microsoft/typescript-go/internal/vfs"
 	"github.com/microsoft/typescript-go/internal/vfs/vfstest"
 )
@@ -46,6 +47,170 @@ func TestResolveModuleNameTrailingSlash(t *testing.T) {
 		if !r.IsResolved() {
 			t.Errorf("%q failed to resolve", name)
 		}
+	}
+}
+
+func TestResolveWasmModule(t *testing.T) {
+	t.Parallel()
+
+	fs := vfstest.FromMap(map[string]string{
+		"/repo/node_modules/pkg/a.wasm":       "\x00asm\x01\x00\x00\x00",
+		"/repo/node_modules/pkg/package.json": `{"name":"pkg","exports":"./a.wasm"}`,
+		"/repo/src/a.wasm":                    "\x00asm\x01\x00\x00\x00",
+		"/repo/src/b.ts":                      "",
+		"/repo/src/c.wasm":                    "\x00asm\x01\x00\x00\x00",
+	}, true)
+	host := &resolutionHostStub{fs: fs, cwd: "/repo"}
+	opts := &core.CompilerOptions{
+		ModuleResolution: core.ModuleResolutionKindBundler,
+		Module:           core.ModuleKindESNext,
+		Target:           core.ScriptTargetESNext,
+	}
+	resolver := module.NewResolver(host, opts, "", "")
+
+	resolved, _ := resolver.ResolveModuleNameWithPhase("./a.wasm", "/repo/src/b.ts", core.ModuleKindESNext, module.ImportPhaseSource, nil /*redirectedReference*/)
+	if !resolved.IsResolved() {
+		t.Fatal("Wasm module was not resolved")
+	}
+	if resolved.ResolvedFileName != "/repo/src/a.wasm" {
+		t.Fatalf("resolved file name = %q, want %q", resolved.ResolvedFileName, "/repo/src/a.wasm")
+	}
+	if resolved.Extension != tspath.ExtensionWasm {
+		t.Fatalf("resolved extension = %q, want %q", resolved.Extension, tspath.ExtensionWasm)
+	}
+
+	resolved, _ = resolver.ResolveModuleName("./a.wasm", "/repo/src/b.ts", core.ModuleKindESNext, nil /*redirectedReference*/)
+	if resolved.IsResolved() {
+		t.Fatalf("Wasm module resolved in the evaluation phase to %q", resolved.ResolvedFileName)
+	}
+
+	resolved, _ = resolver.ResolveModuleName("./c.wasm", "/repo/src/b.ts", core.ModuleKindESNext, nil /*redirectedReference*/)
+	if resolved.IsResolved() {
+		t.Fatalf("Wasm module resolved in the evaluation phase to %q", resolved.ResolvedFileName)
+	}
+	resolved, _ = resolver.ResolveModuleNameWithPhase("./c.wasm", "/repo/src/b.ts", core.ModuleKindESNext, module.ImportPhaseSource, nil /*redirectedReference*/)
+	if !resolved.IsResolved() {
+		t.Fatal("Wasm module was not resolved after an evaluation-phase miss")
+	}
+
+	resolved, _ = resolver.ResolveModuleNameWithPhase("pkg", "/repo/src/b.ts", core.ModuleKindESNext, module.ImportPhaseSource, nil /*redirectedReference*/)
+	if !resolved.IsResolved() {
+		t.Fatal("package Wasm module was not resolved")
+	}
+	if resolved.ResolvedFileName != "/repo/node_modules/pkg/a.wasm" {
+		t.Fatalf("resolved package file name = %q, want %q", resolved.ResolvedFileName, "/repo/node_modules/pkg/a.wasm")
+	}
+
+	resolved, _ = resolver.ResolveModuleName("pkg", "/repo/src/b.ts", core.ModuleKindESNext, nil /*redirectedReference*/)
+	if resolved.IsResolved() {
+		t.Fatalf("package Wasm module resolved in the evaluation phase to %q", resolved.ResolvedFileName)
+	}
+}
+
+func TestSourcePhasePackageResolutionUsesRuntimeTarget(t *testing.T) {
+	t.Parallel()
+
+	fs := vfstest.FromMap(map[string]string{
+		"/repo/node_modules/exports/a.wasm":       "\x00asm\x01\x00\x00\x00",
+		"/repo/node_modules/exports/index.d.ts":   "export {};",
+		"/repo/node_modules/exports/package.json": `{"name":"exports","exports":{"types":"./index.d.ts","default":"./a.wasm"}}`,
+		"/repo/node_modules/main/a.wasm":          "\x00asm\x01\x00\x00\x00",
+		"/repo/node_modules/main/index.d.ts":      "export {};",
+		"/repo/node_modules/main/package.json":    `{"name":"main","types":"./index.d.ts","main":"./a.wasm"}`,
+		"/repo/src/b.ts":                          "",
+	}, true)
+	host := &resolutionHostStub{fs: fs, cwd: "/repo"}
+	opts := &core.CompilerOptions{
+		ModuleResolution: core.ModuleResolutionKindBundler,
+		Module:           core.ModuleKindESNext,
+		Target:           core.ScriptTargetESNext,
+	}
+	resolver := module.NewResolver(host, opts, "", "")
+
+	for _, packageName := range []string{"exports", "main"} {
+		resolved, _ := resolver.ResolveModuleNameWithPhase(packageName, "/repo/src/b.ts", core.ModuleKindESNext, module.ImportPhaseSource, nil /*redirectedReference*/)
+		expected := "/repo/node_modules/" + packageName + "/a.wasm"
+		if resolved.ResolvedFileName != expected {
+			t.Errorf("source phase %q resolved to %q, want %q", packageName, resolved.ResolvedFileName, expected)
+		}
+
+		resolved, _ = resolver.ResolveModuleName(packageName, "/repo/src/b.ts", core.ModuleKindESNext, nil /*redirectedReference*/)
+		expected = "/repo/node_modules/" + packageName + "/index.d.ts"
+		if resolved.ResolvedFileName != expected {
+			t.Errorf("evaluation phase %q resolved to %q, want %q", packageName, resolved.ResolvedFileName, expected)
+		}
+	}
+}
+
+func TestResolveWasmModuleWithModuleSuffix(t *testing.T) {
+	t.Parallel()
+
+	fs := vfstest.FromMap(map[string]string{
+		"/repo/src/a.native.wasm": "\x00asm\x01\x00\x00\x00",
+		"/repo/src/b.ts":          "",
+	}, true)
+	host := &resolutionHostStub{fs: fs, cwd: "/repo"}
+	opts := &core.CompilerOptions{
+		ModuleResolution: core.ModuleResolutionKindBundler,
+		Module:           core.ModuleKindESNext,
+		Target:           core.ScriptTargetESNext,
+		ModuleSuffixes:   []string{".native"},
+	}
+	resolver := module.NewResolver(host, opts, "", "")
+
+	resolved, _ := resolver.ResolveModuleNameWithPhase("./a.wasm", "/repo/src/b.ts", core.ModuleKindESNext, module.ImportPhaseSource, nil /*redirectedReference*/)
+	if !resolved.IsResolved() {
+		t.Fatal("Wasm module was not resolved")
+	}
+	if resolved.ResolvedFileName != "/repo/src/a.native.wasm" {
+		t.Fatalf("resolved file name = %q, want %q", resolved.ResolvedFileName, "/repo/src/a.native.wasm")
+	}
+}
+
+func TestSourcePhaseDoesNotResolveUnknownPhysicalModuleTypes(t *testing.T) {
+	t.Parallel()
+
+	fs := vfstest.FromMap(map[string]string{
+		"/repo/src/a.txt": "text",
+		"/repo/src/b.ts":  "",
+	}, true)
+	host := &resolutionHostStub{fs: fs, cwd: "/repo"}
+	opts := &core.CompilerOptions{
+		ModuleResolution: core.ModuleResolutionKindBundler,
+		Module:           core.ModuleKindESNext,
+		Target:           core.ScriptTargetESNext,
+	}
+	resolver := module.NewResolver(host, opts, "", "")
+
+	resolved, _ := resolver.ResolveModuleNameWithPhase("./a.txt", "/repo/src/b.ts", core.ModuleKindESNext, module.ImportPhaseSource, nil /*redirectedReference*/)
+	if resolved.IsResolved() {
+		t.Fatalf("Unknown physical module type resolved to %q", resolved.ResolvedFileName)
+	}
+}
+
+func TestResolveWasmModuleDeclarationSidecarIgnoresGlobalTypings(t *testing.T) {
+	t.Parallel()
+
+	fs := vfstest.FromMap(map[string]string{
+		"/repo/cache/node_modules/pkg/index.d.ts": `export {};`,
+		"/repo/node_modules/pkg/a.d.wasm.ts":      `export {};`,
+		"/repo/node_modules/pkg/package.json":     `{"name":"pkg","exports":"./a.wasm"}`,
+		"/repo/src/b.ts":                          "",
+	}, true)
+	host := &resolutionHostStub{fs: fs, cwd: "/repo"}
+	opts := &core.CompilerOptions{
+		ModuleResolution: core.ModuleResolutionKindBundler,
+		Module:           core.ModuleKindESNext,
+		Target:           core.ScriptTargetESNext,
+	}
+	resolver := module.NewResolver(host, opts, "project", "/repo/cache")
+
+	resolved, _ := resolver.ResolveModuleNameWithPhase("pkg", "/repo/src/b.ts", core.ModuleKindESNext, module.ImportPhaseSource, nil /*redirectedReference*/)
+	if !resolved.IsResolved() {
+		t.Fatal("Wasm module declaration sidecar was not resolved")
+	}
+	if resolved.ResolvedFileName != "/repo/node_modules/pkg/a.d.wasm.ts" {
+		t.Fatalf("resolved file name = %q, want %q", resolved.ResolvedFileName, "/repo/node_modules/pkg/a.d.wasm.ts")
 	}
 }
 

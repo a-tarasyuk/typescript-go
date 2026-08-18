@@ -12,6 +12,7 @@ const (
 	ExtensionJs          = ".js"
 	ExtensionJsx         = ".jsx"
 	ExtensionJson        = ".json"
+	ExtensionWasm        = ".wasm"
 	ExtensionTsBuildInfo = ".tsbuildinfo"
 	ExtensionMjs         = ".mjs"
 	ExtensionMts         = ".mts"
@@ -40,7 +41,7 @@ func ExtensionIsTs(ext string) bool {
 	return ext == ExtensionTs || ext == ExtensionTsx || ext == ExtensionDts || ext == ExtensionMts || ext == ExtensionDmts || ext == ExtensionCts || ext == ExtensionDcts || len(ext) >= 7 && ext[:3] == ".d." && ext[len(ext)-3:] == ".ts"
 }
 
-var extensionsToRemove = []string{ExtensionDts, ExtensionDmts, ExtensionDcts, ExtensionMjs, ExtensionMts, ExtensionCjs, ExtensionCts, ExtensionTs, ExtensionJs, ExtensionTsx, ExtensionJsx, ExtensionJson}
+var extensionsToRemove = []string{ExtensionDts, ExtensionDmts, ExtensionDcts, ExtensionMjs, ExtensionMts, ExtensionCjs, ExtensionCts, ExtensionTs, ExtensionJs, ExtensionTsx, ExtensionJsx, ExtensionJson, ExtensionWasm}
 
 func RemoveFileExtension(path string) string {
 	// Remove any known extension even if it has more than one dot

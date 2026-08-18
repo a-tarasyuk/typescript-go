@@ -1,0 +1,26 @@
+//// [tests/cases/conformance/importSource/importSource14.ts] ////
+
+=== a.d.wasm.ts ===
+export function add(a: number, b: number): number;
+>add : Symbol(add, Decl(a.d.wasm.ts, 0, 0))
+>a : Symbol(a, Decl(a.d.wasm.ts, 0, 20))
+>b : Symbol(b, Decl(a.d.wasm.ts, 0, 30))
+
+=== b.js ===
+import source a from "./a.wasm";
+>a : Symbol(a, Decl(b.js, 0, 6))
+
+const b = import.source("./a.wasm");
+>b : Symbol(b, Decl(b.js, 1, 5))
+>"./a.wasm" : Symbol("./a.wasm", Decl(a.d.wasm.ts, 0, 0))
+
+/** @type {WebAssembly.Module} */
+const c = a;
+>c : Symbol(c, Decl(b.js, 3, 5))
+>a : Symbol(a, Decl(b.js, 0, 6))
+
+/** @type {Promise<WebAssembly.Module>} */
+const d = b;
+>d : Symbol(d, Decl(b.js, 5, 5))
+>b : Symbol(b, Decl(b.js, 1, 5))
+

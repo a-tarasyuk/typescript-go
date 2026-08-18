@@ -340,3 +340,19 @@ func TestTryGetModuleNameFromExportsOrImports(t *testing.T) {
 		}
 	})
 }
+
+func TestProcessEndingPreservesWasmExtension(t *testing.T) {
+	t.Parallel()
+
+	for _, ending := range []ModuleSpecifierEnding{
+		ModuleSpecifierEndingMinimal,
+		ModuleSpecifierEndingIndex,
+		ModuleSpecifierEndingJsExtension,
+		ModuleSpecifierEndingTsExtension,
+	} {
+		actual := processEnding("./a.wasm", []ModuleSpecifierEnding{ending}, &core.CompilerOptions{}, nil /*host*/)
+		if actual != "./a.wasm" {
+			t.Errorf("processEnding with ending %d returned %q, expected %q", ending, actual, "./a.wasm")
+		}
+	}
+}

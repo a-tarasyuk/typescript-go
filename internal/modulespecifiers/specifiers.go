@@ -639,7 +639,7 @@ func processEnding(
 	options *core.CompilerOptions,
 	host ModuleSpecifierGenerationHost,
 ) string {
-	if tspath.FileExtensionIsOneOf(fileName, []string{tspath.ExtensionJson, tspath.ExtensionMjs, tspath.ExtensionCjs}) {
+	if tspath.FileExtensionIsOneOf(fileName, []string{tspath.ExtensionJson, tspath.ExtensionMjs, tspath.ExtensionCjs, tspath.ExtensionWasm}) {
 		return fileName
 	}
 

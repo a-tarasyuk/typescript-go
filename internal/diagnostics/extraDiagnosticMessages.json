@@ -146,5 +146,33 @@
     "Duplicate named capturing groups are only available when targeting '{0}' or later.": {
         "category": "Error",
         "code": 18063
+    },
+    "A source phase import must specify a local binding.": {
+        "category": "Error",
+        "code": 100020
+    },
+    "Named and namespace imports are not allowed in a source phase import.": {
+        "category": "Error",
+        "code": 100021
+    },
+    "Source phase imports are only supported when the '--module' option is set to 'esnext', 'nodenext', or 'preserve'.": {
+        "category": "Error",
+        "code": 100022
+    },
+    "Optional chaining cannot be used with 'import.source'.": {
+        "category": "Error",
+        "code": 100023
+    },
+    "'{0}' is not a valid meta-property for keyword 'import'. Did you mean 'meta', 'defer', or 'source'?": {
+        "category": "Error",
+        "code": 100024
+    },
+    "Source phase imports are not allowed on statements that compile to CommonJS 'require' calls.": {
+        "category": "Error",
+        "code": 100025
+    },
+    "A declaration file cannot be imported with a source phase import.": {
+        "category": "Error",
+        "code": 100026
     }
 }

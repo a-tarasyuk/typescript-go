@@ -1,0 +1,10 @@
+//// [tests/cases/conformance/importSource/importSource24.ts] ////
+
+=== a.d.wasm.ts ===
+
+export {};
+
+=== b.ts ===
+import source a from "./a.wasm";
+>a : Symbol(a, Decl(b.ts, 0, 6))
+
